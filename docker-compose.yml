@@ -1,5 +1,6 @@
 services:
   nginx:
+    user: root
     build: .
     image: heartexlabs/label-studio:latest
     restart: unless-stopped
@@ -25,6 +26,7 @@ services:
     command: nginx
 
   app:
+    user: root
     stdin_open: true
     tty: true
     build: .
