@@ -12,13 +12,22 @@ const CopyButton = ({ msg }) => {
 
   return (
     <Button variant="neutral" icon={<IconFileCopy />} onClick={() => copyText()} disabled={copied} className="w-[7rem]">
-      {copied ? "Copied!" : "Copy"}
+      {copied ? "已复制" : "复制"}
     </Button>
   );
 };
 
 export const StorageSummary = ({ target, storage, className, storageTypes = [] }) => {
-  const storageStatus = storage.status.replace(/_/g, " ").replace(/(^\w)/, (match) => match.toUpperCase());
+  const storageStatusRaw = storage.status.replace(/_/g, " ").replace(/(^\w)/, (match) => match.toUpperCase());
+  const statusLabels = {
+    Initialized: "初始化",
+    Queued: "排队中",
+    "In progress": "进行中",
+    Failed: "失败",
+    "Completed with errors": "完成但有错误",
+    Completed: "已完成",
+  };
+  const storageStatus = statusLabels[storageStatusRaw] ?? storageStatusRaw;
   const last_sync_count = storage.last_sync_count ? storage.last_sync_count : 0;
 
   const tasks_existed =
@@ -31,26 +40,23 @@ export const StorageSummary = ({ target, storage, className, storageTypes = [] }
       : 0;
 
   // help text for tasks and annotations
-  const tasks_added_help = `${last_sync_count} new tasks added during the last sync.`;
-  const tasks_total_help = [
-    `${tasks_existed} tasks that have been found and already synced will not be added to the project again.`,
-    `${tasks_existed + last_sync_count} tasks have been added in total for this storage.`,
-  ].join("\n");
-  const annotations_help = `${last_sync_count} annotations successfully saved during the last sync.`;
+  const tasks_added_help = `本次新增任务数：${last_sync_count}`;
+  const tasks_total_help = [`同步前已有任务数：${tasks_existed}`, `同步后任务总数：${tasks_existed + last_sync_count}`].join(
+    "\n",
+  );
+  const annotations_help = `本次导出标注数：${last_sync_count}`;
   const total_annotations_help =
-    typeof storage.meta?.total_annotations !== "undefined"
-      ? `${storage.meta.total_annotations} total annotations seen in the project at the sync moment.`
-      : "";
+    typeof storage.meta?.total_annotations !== "undefined" ? `总标注数：${storage.meta.total_annotations}` : "";
 
   const handleButtonClick = () => {
     const msg =
-      `Error logs for ${target === "export" ? "export " : ""}${storage.type} ` +
-      `storage ${storage.id} in project ${storage.project} and job ${storage.last_sync_job}:\n\n` +
+      `${target === "export" ? "导出" : ""}${storage.type} 存储 ` +
+      `项目 ${storage.project}，作业 ${storage.last_sync_job} 错误详情：\n\n` +
       `${getLastTraceback(storage.traceback)}\n\n` +
       `meta = ${JSON.stringify(storage.meta)}\n`;
 
     const currentModal = modal({
-      title: "Storage Sync Error Log",
+      title: "错误详情",
       body: <CodeBlock code={msg} variant="negative" className="max-h-[50vh] overflow-y-auto" />,
       footer: (
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -61,18 +67,18 @@ export const StorageSummary = ({ target, storage, className, storageTypes = [] }
                   href="https://labelstud.io/guide/storage.html#Troubleshooting"
                   target="_blank"
                   rel="noreferrer noopener"
-                  aria-label="Learn more about cloud storage troubleshooting"
+                  aria-label="查看故障排查（新窗口打开）"
                 >
-                  See docs
-                </a>{" "}
-                for troubleshooting tips on cloud storage connections.
+                  查看故障排查
+                </a>
+                ，了解更多信息。
               </>
             </div>
           )}
           <Space>
             <CopyButton msg={msg} />
             <Button variant="primary" className="w-[7rem]" onClick={() => currentModal.close()}>
-              Close
+              关闭
             </Button>
           </Space>
         </div>
@@ -86,7 +92,7 @@ export const StorageSummary = ({ target, storage, className, storageTypes = [] }
   return (
     <div className={className}>
       <DescriptionList>
-        <DescriptionList.Item term="Type">
+        <DescriptionList.Item term="类型">
           {(storageTypes ?? []).find((s) => s.name === storage.type)?.title ?? storage.type}
         </DescriptionList.Item>
 
@@ -99,22 +105,22 @@ export const StorageSummary = ({ target, storage, className, storageTypes = [] }
         </Oneof>
 
         <DescriptionList.Item
-          term="Status"
+          term="状态"
           help={[
-            "Initialized: storage was added, but never synced; sufficient for starting URI link resolving",
-            "Queued: sync job is in the queue, but not yet started",
-            "In progress: sync job is running",
-            "Failed: sync job stopped, some errors occurred",
-            "Completed with errors: sync job completed but some tasks had validation errors",
-            "Completed: sync job completed successfully",
+            "初始化：首次创建后，尚未开始同步。",
+            "排队中：同步任务已进入队列。",
+            "进行中：正在同步数据。",
+            "失败：同步失败。",
+            "完成但有错误：同步完成，但部分数据失败。",
+            "已完成：同步完成。",
           ].join("\n")}
         >
-          {storageStatus === "Failed" || storageStatus === "Completed with errors" ? (
+          {storageStatusRaw === "Failed" || storageStatusRaw === "Completed with errors" ? (
             <span
               className="cursor-pointer border-b border-dashed border-negative-border-subtle text-negative-content"
               onClick={handleButtonClick}
             >
-              {storageStatus} (View Logs)
+              {storageStatus}（点击查看详情）
             </span>
           ) : (
             storageStatus
@@ -122,27 +128,27 @@ export const StorageSummary = ({ target, storage, className, storageTypes = [] }
         </DescriptionList.Item>
 
         {target === "export" ? (
-          <DescriptionList.Item term="Annotations" help={`${annotations_help}\n${total_annotations_help}`}>
+          <DescriptionList.Item term="标注" help={`${annotations_help}\n${total_annotations_help}`}>
             <Tooltip title={annotations_help}>
               <span>{last_sync_count}</span>
             </Tooltip>
             <Tooltip title={total_annotations_help}>
-              <span> ({total_annotations} total)</span>
+              <span>总计 {total_annotations} 条</span>
             </Tooltip>
           </DescriptionList.Item>
         ) : (
-          <DescriptionList.Item term="Tasks" help={`${tasks_added_help}\n${tasks_total_help}`}>
+          <DescriptionList.Item term="任务" help={`${tasks_added_help}\n${tasks_total_help}`}>
             <Tooltip title={`${tasks_added_help}\n${tasks_total_help}`} style={{ whiteSpace: "pre-wrap" }}>
               <span>{last_sync_count + tasks_existed}</span>
             </Tooltip>
             <Tooltip title={tasks_added_help}>
-              <span> ({last_sync_count} new)</span>
+              <span>新增 {last_sync_count} 条</span>
             </Tooltip>
           </DescriptionList.Item>
         )}
 
-        <DescriptionList.Item term="Last Sync">
-          {storage.last_sync ? format(new Date(storage.last_sync), "MMMM dd, yyyy ∙ HH:mm:ss") : "Not synced yet"}
+        <DescriptionList.Item term="上次同步">
+          {storage.last_sync ? format(new Date(storage.last_sync), "yyyy-MM-dd HH:mm:ss") : "从未同步"}
         </DescriptionList.Item>
       </DescriptionList>
     </div>
@@ -150,22 +156,22 @@ export const StorageSummary = ({ target, storage, className, storageTypes = [] }
 };
 
 const SummaryS3 = ({ storage }) => {
-  return <DescriptionList.Item term="Bucket">{storage.bucket}</DescriptionList.Item>;
+  return <DescriptionList.Item term="存储桶">{storage.bucket}</DescriptionList.Item>;
 };
 
 const GSCStorage = ({ storage }) => {
-  return <DescriptionList.Item term="Bucket">{storage.bucket}</DescriptionList.Item>;
+  return <DescriptionList.Item term="存储桶">{storage.bucket}</DescriptionList.Item>;
 };
 
 const AzureStorage = ({ storage }) => {
-  return <DescriptionList.Item term="Container">{storage.container}</DescriptionList.Item>;
+  return <DescriptionList.Item term="容器">{storage.container}</DescriptionList.Item>;
 };
 
 const RedisStorage = ({ storage }) => {
   return (
     <>
-      <DescriptionList.Item term="Path">{storage.path}</DescriptionList.Item>
-      <DescriptionList.Item term="Host">
+      <DescriptionList.Item term="路径">{storage.path}</DescriptionList.Item>
+      <DescriptionList.Item term="主机">
         {storage.host}
         {storage.port ? `:${storage.port}` : ""}
       </DescriptionList.Item>
@@ -174,5 +180,5 @@ const RedisStorage = ({ storage }) => {
 };
 
 const LocalStorage = ({ storage }) => {
-  return <DescriptionList.Item term="Path">{storage.path}</DescriptionList.Item>;
+  return <DescriptionList.Item term="路径">{storage.path}</DescriptionList.Item>;
 };

@@ -40,11 +40,11 @@ export const TopBar = observer(({ store }) => {
             <Button
               className={"topbar__button"}
               type={isViewAll ? undefined : "string"}
-              aria-label="Compare all annotations"
+              aria-label="对比所有标注"
               onClick={annotationStore.toggleViewingAllAnnotations}
               variant={isViewAll ? "primary" : "neutral"}
               look={isViewAll ? "filled" : "string"}
-              tooltip="Compare all annotations"
+              tooltip="对比所有标注"
               size="small"
             >
               <IconViewAll />
@@ -54,11 +54,11 @@ export const TopBar = observer(({ store }) => {
             <Button
               className={"topbar__button"}
               type={isViewAll ? undefined : "text"}
-              aria-label="Create an annotation"
+              aria-label="创建标注"
               variant="neutral"
               size="small"
               look="string"
-              tooltip="Create a new annotation"
+              tooltip="新建标注"
               onClick={(event) => {
                 event.preventDefault();
                 const created = store.annotationStore.createAnnotation();

@@ -180,9 +180,9 @@ const COLOR_SCHEME_OPTIONS: { label: React.ReactNode; value: string; key: string
 
 // Scale Options
 const SCALE_OPTIONS: { label: string; value: SpectrogramScale }[] = [
-  { value: "linear", label: "Linear Frequency" },
-  { value: "log", label: "Logarithmic Frequency" },
-  { value: "mel", label: "Mel Scale" },
+  { value: "linear", label: "线性频率" },
+  { value: "log", label: "对数频率" },
+  { value: "mel", label: "梅尔刻度" },
 ];
 
 export interface SpectrogramControlProps {
@@ -418,7 +418,7 @@ export const SpectrogramControl: FC<SpectrogramControlProps> = ({ waveform }) =>
   const showWarning =
     Number(fftInputText) > 1024 || (displayScale === "mel" && (settings?.numberOfMelBands ?? DEFAULT_MEL_VALUE) > 140);
 
-  const fftInfoText = "Higher values provide more frequency resolution but increase computation.";
+  const fftInfoText = "更高的数值会带来更高的频率分辨率，但会增加计算量。";
   const displayMelBands = settings?.numberOfMelBands ?? DEFAULT_MEL_VALUE;
   const displayWindowFunc = settings?.spectrogramWindowingFunction ?? DEFAULT_WINDOWING_FUNCTION;
   const isMelScaleSelected = displayScale === "mel";
@@ -426,7 +426,7 @@ export const SpectrogramControl: FC<SpectrogramControlProps> = ({ waveform }) =>
   return (
     <div className={cn("spectrogram-controls").toClassName()}>
       {showWarning && (
-        <Tooltip title="High FFT or mel band values may cause performance issues or artifacts.">
+        <Tooltip title="FFT 或 Mel 频带值过高可能导致性能问题或伪影。">
           <IconWarningCircleFilled
             style={{
               color: "var(--color-warning-icon, #faad14)",
@@ -453,7 +453,7 @@ export const SpectrogramControl: FC<SpectrogramControlProps> = ({ waveform }) =>
         />
         <div className={cn("spectrogram-controls").elem("control").toClassName()}>
           <div className={cn("spectrogram-controls").elem("info").toClassName()}>
-            FFT Samples
+            FFT 采样数
             <Tooltip title={fftInfoText}>
               <IconInfoConfig />
             </Tooltip>
@@ -468,8 +468,8 @@ export const SpectrogramControl: FC<SpectrogramControlProps> = ({ waveform }) =>
       </div>
       <div className={cn("spectrogram-controls").elem("spectrogram-controls").toClassName()}>
         <div className={cn("spectrogram-controls").elem("info").toClassName()}>
-          Scale
-          <Tooltip title="Determines the frequency scale mapping: Linear, Logarithmic, or Mel (perceptual).">
+          频率尺度
+          <Tooltip title="决定频率刻度映射：线性、对数或梅尔（感知）。">
             <IconInfoConfig />
           </Tooltip>
         </div>
@@ -482,8 +482,8 @@ export const SpectrogramControl: FC<SpectrogramControlProps> = ({ waveform }) =>
             max={220}
             step={1}
             value={displayMelBands}
-            description={"Number of Mel Bands"}
-            info={"Specifies the number of frequency bands using the Mel scale. "}
+            description={"Mel 频带数量"}
+            info={"指定使用梅尔刻度的频带数量。"}
             onChange={handleChangeNumberOfMelBands}
           />
         </div>
@@ -502,8 +502,8 @@ export const SpectrogramControl: FC<SpectrogramControlProps> = ({ waveform }) =>
         />
         <div className={cn("spectrogram-controls").elem("control").toClassName()}>
           <div className={cn("spectrogram-controls").elem("info").toClassName()}>
-            Spectogram dB
-            <Tooltip title="Controls the range of decibel values shown in the spectrogram. Lower values show quieter sounds.">
+            频谱 dB
+            <Tooltip title="控制频谱显示的分贝范围，值越低显示越安静的声音。">
               <IconInfoConfig />
             </Tooltip>
           </div>
@@ -521,7 +521,7 @@ export const SpectrogramControl: FC<SpectrogramControlProps> = ({ waveform }) =>
               min={-120}
               max={displayMaxDb - 10}
             />
-            <span className={cn("spectrogram-controls").elem("separator").toClassName()}>to</span>
+            <span className={cn("spectrogram-controls").elem("separator").toClassName()}>至</span>
             <input
               className={cn("spectrogram-controls").elem("input").toClassName()}
               type="number"
@@ -539,7 +539,7 @@ export const SpectrogramControl: FC<SpectrogramControlProps> = ({ waveform }) =>
         </div>
       </div>
       <div className={cn("spectrogram-controls").elem("spectrogram-controls").toClassName()}>
-        <div className={cn("spectrogram-controls").elem("label").toClassName()}>Windowing Function</div>
+        <div className={cn("spectrogram-controls").elem("label").toClassName()}>窗函数</div>
         <Select
           value={displayWindowFunc}
           onChange={handleChangeWindowingFunction}
@@ -548,7 +548,7 @@ export const SpectrogramControl: FC<SpectrogramControlProps> = ({ waveform }) =>
         />
       </div>
       <div className={cn("spectrogram-controls").elem("spectrogram-controls").toClassName()}>
-        <div className={cn("spectrogram-controls").elem("label").toClassName()}>Color Scheme</div>
+        <div className={cn("spectrogram-controls").elem("label").toClassName()}>配色方案</div>
         <Select
           value={displayColorScheme}
           onChange={handleChangeColorScheme}

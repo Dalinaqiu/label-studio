@@ -19,7 +19,7 @@ export const DangerZone = () => {
   const toast = useToast();
   const [processing, setProcessing] = useState(null);
 
-  useUpdatePageTitle(createTitleFromSegments([project?.title, "Danger Zone"]));
+  useUpdatePageTitle(createTitleFromSegments([project?.title, "危险区域"]));
 
   const showDangerConfirmation = ({ title, message, requiredWord, buttonText, onConfirm }) => {
     const isDev = process.env.NODE_ENV === "development";
@@ -38,7 +38,7 @@ export const DangerZone = () => {
               {message}
             </Typography>
             <Input
-              label={`To proceed, type "${requiredWord}" in the field below:`}
+              label={`请输入 ${requiredWord} 以确认`}
               value={inputValue}
               onChange={(e) => ctrl?.setState({ inputValue: e.target.value })}
               autoFocus
@@ -61,7 +61,7 @@ export const DangerZone = () => {
               onClick={() => ctrl?.hide()}
               data-testid="danger-zone-cancel-button"
             >
-              Cancel
+              取消
             </Button>
             <Button
               variant="negative"
@@ -83,34 +83,34 @@ export const DangerZone = () => {
   const handleOnClick = (type) => () => {
     const actionConfig = {
       reset_cache: {
-        title: "Reset Cache",
+        title: "重置缓存",
         message: (
           <>
-            You are about to reset the cache for <strong>{project.title}</strong>. This action cannot be undone.
+            这将重置项目 <strong>{project.title}</strong> 的缓存。
           </>
         ),
         requiredWord: "cache",
-        buttonText: "Reset Cache",
+        buttonText: "重置缓存",
       },
       tabs: {
-        title: "Drop All Tabs",
+        title: "删除标注标签页",
         message: (
           <>
-            You are about to drop all tabs for <strong>{project.title}</strong>. This action cannot be undone.
+            这将删除项目 <strong>{project.title}</strong> 的所有标注标签页。
           </>
         ),
         requiredWord: "tabs",
-        buttonText: "Drop All Tabs",
+        buttonText: "删除标注标签页",
       },
       project: {
-        title: "Delete Project",
+        title: "删除项目",
         message: (
           <>
-            You are about to delete the project <strong>{project.title}</strong>. This action cannot be undone.
+            这将永久删除项目 <strong>{project.title}</strong> 及其所有数据。
           </>
         ),
         requiredWord: "delete",
-        buttonText: "Delete Project",
+        buttonText: "删除项目",
       },
     };
 
@@ -131,25 +131,25 @@ export const DangerZone = () => {
                 pk: project.id,
               },
             });
-            toast.show({ message: "Cache reset successfully" });
+            toast.show({ message: "缓存已重置" });
           } else if (type === "tabs") {
             await api.callApi("deleteTabs", {
               body: {
                 project: project.id,
               },
             });
-            toast.show({ message: "All tabs dropped successfully" });
+            toast.show({ message: "标注标签页已删除" });
           } else if (type === "project") {
             await api.callApi("deleteProject", {
               params: {
                 pk: project.id,
               },
             });
-            toast.show({ message: "Project deleted successfully" });
+            toast.show({ message: "项目已删除" });
             history.replace("/projects");
           }
         } catch (error) {
-          toast.show({ message: `Error: ${error.message}`, type: "error" });
+          toast.show({ message: `操作失败：${error.message}`, type: "error" });
         } finally {
           setProcessing(null);
         }
@@ -162,35 +162,32 @@ export const DangerZone = () => {
       {
         type: "annotations",
         disabled: true, //&& !project.total_annotations_number,
-        label: `Delete ${project.total_annotations_number} Annotations`,
+        label: `删除 ${project.total_annotations_number} 条标注`,
       },
       {
         type: "tasks",
         disabled: true, //&& !project.task_number,
-        label: `Delete ${project.task_number} Tasks`,
+        label: `删除 ${project.task_number} 个任务`,
       },
       {
         type: "predictions",
         disabled: true, //&& !project.total_predictions_number,
-        label: `Delete ${project.total_predictions_number} Predictions`,
+        label: `删除 ${project.total_predictions_number} 条预测`,
       },
       {
         type: "reset_cache",
-        help:
-          "Reset Cache may help in cases like if you are unable to modify the labeling configuration due " +
-          "to validation errors concerning existing labels, but you are confident that the labels don't exist. You can " +
-          "use this action to reset the cache and try again.",
-        label: "Reset Cache",
+        help: "当你无法修改标注配置且确认不存在冲突标签时，可重置缓存后重试。",
+        label: "重置缓存",
       },
       {
         type: "tabs",
-        help: "If the Data Manager is not loading, dropping all Data Manager tabs can help.",
-        label: "Drop All Tabs",
+        help: "删除所有标注标签页和相关设置。",
+        label: "删除标注标签页",
       },
       {
         type: "project",
-        help: "Deleting a project removes all tasks, annotations, and project data from the database.",
-        label: "Delete Project",
+        help: "永久删除项目及其全部数据。",
+        label: "删除项目",
       },
     ],
     [project],
@@ -199,11 +196,10 @@ export const DangerZone = () => {
   return (
     <div className={cn("simple-settings")}>
       <Typography variant="headline" size="medium" className="mb-tighter">
-        Danger Zone
+        危险区域
       </Typography>
       <Typography variant="body" size="medium" className="text-neutral-content-subtler !mb-base">
-        Perform these actions at your own risk. Actions you take on this page can't be reverted. Make sure your data is
-        backed up.
+        这些操作不可撤销，请谨慎操作。
       </Typography>
 
       {project.id ? (
@@ -244,5 +240,5 @@ export const DangerZone = () => {
   );
 };
 
-DangerZone.title = "Danger Zone";
+DangerZone.title = "危险区域";
 DangerZone.path = "/danger-zone";

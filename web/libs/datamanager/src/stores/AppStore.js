@@ -333,12 +333,12 @@ export const AppStore = types
 
       if (isFF(FF_DEV_2887) && self.LSF?.lsf?.annotationStore?.selected?.commentStore?.hasUnsaved) {
         Modal.confirm({
-          title: "You have unsaved changes",
-          body: "There are comments which are not persisted. Please submit the annotation. Continuing will discard these comments.",
+          title: "有未保存的更改",
+          body: "有未保存的评论。请先提交标注，继续将丢弃这些评论。",
           onOk() {
             nextAction();
           },
-          okText: "Discard and continue",
+          okText: "丢弃并继续",
         });
         return;
       }
@@ -378,12 +378,12 @@ export const AppStore = types
 
       if (isFF(FF_DEV_2887) && self.LSF?.lsf?.annotationStore?.selected?.commentStore?.hasUnsaved) {
         Modal.confirm({
-          title: "You have unsaved changes",
-          body: "There are comments which are not persisted. Please submit the annotation. Continuing will discard these comments.",
+          title: "有未保存的更改",
+          body: "有未保存的评论。请先提交标注，继续将丢弃这些评论。",
           onOk() {
             nextAction();
           },
-          okText: "Discard and continue",
+          okText: "丢弃并继续",
         });
         return;
       }
@@ -394,12 +394,12 @@ export const AppStore = types
     confirmLabelingConfigured() {
       if (!self.labelingIsConfigured) {
         Modal.confirm({
-          title: "You're almost there!",
-          body: "Before you can annotate the data, set up labeling configuration",
+          title: "快完成了！",
+          body: "开始标注前，请先完成标注配置。",
           onOk() {
             self.SDK.invoke("settingsClicked");
           },
-          okText: "Go to setup",
+          okText: "去配置",
         });
         return false;
       }

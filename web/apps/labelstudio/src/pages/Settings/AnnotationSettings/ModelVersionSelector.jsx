@@ -39,7 +39,7 @@ export const ModelVersionSelector = ({
         const label = `${item.title} (${item.readable_state})`;
 
         return {
-          group: "Models",
+          group: "在线模型",
           value: item.title,
           label,
         };
@@ -50,10 +50,10 @@ export const ModelVersionSelector = ({
 
     if (modelVersions?.static?.length > 0) {
       const staticModels = modelVersions.static.map((item) => {
-        const label = `${item.model_version} (${item.count} predictions)`;
+        const label = `${item.model_version} (${item.count} 条标注)`;
 
         return {
-          group: "Predictions",
+          group: "静态版本",
           value: item.model_version,
           label,
         };
@@ -63,7 +63,7 @@ export const ModelVersionSelector = ({
     }
 
     if (!modelVersions?.static?.length && !modelVersions?.live?.length) {
-      setPlaceholder("No model or predictions available");
+      setPlaceholder("暂无可用模型版本");
     }
 
     setLoading(false);
@@ -75,7 +75,7 @@ export const ModelVersionSelector = ({
 
   return (
     <div>
-      <label>Select which predictions or which model you want to use:</label>
+      <label>选择要使用的模型版本</label>
       <div style={{ display: "flex", alignItems: "center", width: 400 }}>
         <div style={{ flex: 1, paddingRight: 16 }}>
           <Select
@@ -84,7 +84,7 @@ export const ModelVersionSelector = ({
             value={version}
             onChange={setVersion}
             options={[...models, ...versions]}
-            placeholder={placeholder || "Please select model or predictions"}
+            placeholder={placeholder || "选择模型版本"}
             isInProgress={loading}
             {...props}
           />

@@ -24,11 +24,11 @@ export const Actions = ({ store }) => {
         {store.description && store.hasInterface("instruction") && (
           <Button
             type="text"
-            aria-label="Instructions"
+            aria-label="??"
             size="small"
             variant="neutral"
             look="string"
-            tooltip="Show instructions"
+            tooltip="????"
             onClick={() => store.toggleDescription()}
             className="aspect-square"
             leading={<IconInfoOutline />}
@@ -37,12 +37,12 @@ export const Actions = ({ store }) => {
         )}
         <Button
           type="text"
-          aria-label="Settings"
+          aria-label="??"
           size="small"
           look="string"
           variant="neutral"
           onClick={() => store.toggleSettings()}
-          tooltip="Settings"
+          tooltip="??"
           className="aspect-square"
           leading={<IconSettings />}
           data-testid="bottombar-settings-button"

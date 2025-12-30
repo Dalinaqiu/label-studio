@@ -1,4 +1,5 @@
 import { formatDistance } from "date-fns";
+import { zhCN } from "date-fns/locale";
 import { useCallback, useEffect, useState } from "react";
 import { Userpic } from "@humansignal/ui";
 import { Pagination, Spinner } from "../../../components";
@@ -63,9 +64,9 @@ export const PeopleList = ({ onSelect, selectedUser, defaultSelected }) => {
             <div className={cn("people-list").elem("users").toClassName()}>
               <div className={cn("people-list").elem("header").toClassName()}>
                 <div className={cn("people-list").elem("column").mix("avatar").toClassName()} />
-                <div className={cn("people-list").elem("column").mix("email").toClassName()}>Email</div>
-                <div className={cn("people-list").elem("column").mix("name").toClassName()}>Name</div>
-                <div className={cn("people-list").elem("column").mix("last-activity").toClassName()}>Last Activity</div>
+                <div className={cn("people-list").elem("column").mix("email").toClassName()}>邮箱</div>
+                <div className={cn("people-list").elem("column").mix("name").toClassName()}>姓名</div>
+                <div className={cn("people-list").elem("column").mix("last-activity").toClassName()}>最近活跃</div>
               </div>
               <div className={cn("people-list").elem("body").toClassName()}>
                 {usersList.map(({ user }) => {
@@ -78,7 +79,7 @@ export const PeopleList = ({ onSelect, selectedUser, defaultSelected }) => {
                       onClick={() => selectUser(user)}
                     >
                       <div className={cn("people-list").elem("field").mix("avatar").toClassName()}>
-                        <CopyableTooltip title={`User ID: ${user.id}`} textForCopy={user.id}>
+                        <CopyableTooltip title={`用户 ID: ${user.id}`} textForCopy={user.id}>
                           <Userpic user={user} style={{ width: 28, height: 28 }} />
                         </CopyableTooltip>
                       </div>
@@ -87,7 +88,7 @@ export const PeopleList = ({ onSelect, selectedUser, defaultSelected }) => {
                         {user.first_name} {user.last_name}
                       </div>
                       <div className={cn("people-list").elem("field").mix("last-activity").toClassName()}>
-                        {formatDistance(new Date(user.last_activity), new Date(), { addSuffix: true })}
+                        {formatDistance(new Date(user.last_activity), new Date(), { addSuffix: true, locale: zhCN })}
                       </div>
                     </div>
                   );

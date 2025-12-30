@@ -106,7 +106,7 @@ export const ExportPage = () => {
 
         history.replace(`${path}${search !== "?" ? search : ""}`);
       }}
-      title="Export data"
+      title="导出"
       style={{ width: 720 }}
       closeOnClickOutside={false}
       allowClose={!downloading}
@@ -129,9 +129,9 @@ export const ExportPage = () => {
             <div className={cn("export-page").elem("recent").toClassName()}>{/* {exportHistory} */}</div>
             <div className={cn("export-page").elem("actions").toClassName()}>
               <Space>
-                {downloadingMessage && "Files are being prepared. It might take some time."}
-                <Button className="w-[135px]" onClick={proceedExport} waiting={downloading} aria-label="Export data">
-                  Export
+                {downloadingMessage && "正在生成文件，请稍候..."}
+                <Button className="w-[135px]" onClick={proceedExport} waiting={downloading} aria-label="开始导出">
+                  导出
                 </Button>
               </Space>
             </div>
@@ -146,7 +146,7 @@ const FormatInfo = ({ availableFormats, selected, onClick }) => {
   return (
     <div className={cn("formats").toClassName()}>
       <div className={cn("formats").elem("info").toClassName()}>
-        You can export dataset in one of the following formats:
+        选择导出格式
       </div>
       <div className={cn("formats").elem("list").toClassName()}>
         {availableFormats.map((format) => (
@@ -180,13 +180,13 @@ const FormatInfo = ({ availableFormats, selected, onClick }) => {
         ))}
       </div>
       <div className={cn("formats").elem("feedback").toClassName()}>
-        Can't find an export format?
+        对导出格式有疑问或需要新格式？
         <br />
-        Please let us know in{" "}
+        欢迎访问{" "}
         <a className="no-go" href="https://slack.labelstud.io/?source=product-export" target="_blank" rel="noreferrer">
           Slack
         </a>{" "}
-        or submit an issue to the{" "}
+        或{" "}
         <a
           className="no-go"
           href="https://github.com/HumanSignal/label-studio-converter/issues"

@@ -51,10 +51,10 @@ const renderCommentIcon = (ent: any) => {
 
 const renderCommentTooltip = (ent: any) => {
   if (ent.unresolved_comment_count > 0) {
-    return "Unresolved Comments";
+    return "未解决的评论";
   }
   if (ent.comment_count > 0) {
-    return "All Comments Resolved";
+    return "评论已全部解决";
   }
 
   return "";
@@ -83,7 +83,7 @@ export const AnnotationButton = observer(
       // this data can be missing in tests, but we don't have `infoIsHidden` there, so hiding logic like this
       const currentUser = annotationStore.store.user;
       const isCurrentUser = entity.user?.id === currentUser.id || entity.createdBy === currentUser.email;
-      hiddenUser = { email: isCurrentUser ? "Me" : "User" };
+      hiddenUser = { email: isCurrentUser ? "我" : "用户" };
     }
 
     const displayUsername = hiddenUser ? hiddenUser.email : username;
@@ -143,7 +143,7 @@ export const AnnotationButton = observer(
           copyLink();
           dropdown?.close();
           toast?.show({
-            message: "Annotation link copied to clipboard",
+            message: "已复制标注链接到剪贴板",
             type: ToastType.info,
           });
         }, [entity, copyLink]);
@@ -152,7 +152,7 @@ export const AnnotationButton = observer(
           copyAnnotationId();
           dropdown?.close();
           toast?.show({
-            message: "Annotation ID copied to clipboard",
+            message: "已复制标注 ID 到剪贴板",
             type: ToastType.info,
           });
         }, [entity, copyAnnotationId]);
@@ -191,16 +191,16 @@ export const AnnotationButton = observer(
         const deleteAnnotation = useCallback(() => {
           clickHandler();
           confirm({
-            title: "Delete annotation?",
+            title: "删除标注？",
             body: (
               <>
-                This will <strong>delete all existing regions</strong>. Are you sure you want to delete them?
+                这将<strong>删除所有已有区域</strong>。确定要删除吗？
                 <br />
-                This action cannot be undone.
+                此操作无法撤销。
               </>
             ),
             buttonLook: "negative",
-            okText: "Delete",
+            okText: "删除",
             onOk: () => {
               entity.list.deleteAnnotation(entity);
             },
@@ -218,13 +218,13 @@ export const AnnotationButton = observer(
         const actions = useMemo<ContextMenuAction[]>(
           () => [
             {
-              label: "Copy Annotation ID",
+              label: "复制标注 ID",
               onClick: copyAnnotationIdHandler,
               icon: <IconClipboardCheck width={20} height={20} />,
               enabled: !isDraft,
             },
             {
-              label: `${isGroundTruth ? "Unset " : "Set "} as Ground Truth`,
+              label: `${isGroundTruth ? "取消" : "设为"}真值`,
               onClick: setGroundTruth,
               icon: isGroundTruth ? (
                 <IconStar color="#FFC53D" width={iconSize} height={iconSize} />
@@ -234,31 +234,31 @@ export const AnnotationButton = observer(
               enabled: showGroundTruth,
             },
             {
-              label: "Duplicate Annotation",
+              label: "复制标注",
               onClick: duplicateAnnotation,
               icon: <IconDuplicate width={20} height={20} />,
               enabled: showDuplicateAnnotation,
             },
             {
-              label: "Copy Annotation Link",
+              label: "复制标注链接",
               onClick: linkAnnotation,
               icon: <IconLink />,
               enabled: !isDraft && store.hasInterface("annotations:copy-link"),
             },
             {
-              label: "Open Performance Dashboard",
+              label: "打开绩效看板",
               onClick: openPerformanceDashboard,
               icon: <IconAnalytics width={20} height={20} />,
               enabled: isLSE && hasProjectId && !isDraft && !isPrediction,
             },
             {
-              label: "Show Other Annotations",
+              label: "显示其他标注",
               onClick: showOtherAnnotations,
               icon: <IconViewAll width={20} height={20} />,
               enabled: true,
             },
             {
-              label: "Delete Annotation",
+              label: "删除标注",
               onClick: deleteAnnotation,
               icon: <IconTrashRect />,
               separator: true,
@@ -327,7 +327,7 @@ export const AnnotationButton = observer(
               <div className={cn("annotation-button").elem("info").toClassName()}>
                 <TimeAgo className={cn("annotation-button").elem("date").toClassName()} date={entity.createdDate} />
                 {isPrediction && isDefined(entity.score) && (
-                  <span title={`Prediction score = ${entity.score}`}>
+                    <span title={`预测分数 = ${entity.score}`}>
                     {" · "} {(entity.score * 100).toFixed(2)}%
                   </span>
                 )}
@@ -337,21 +337,21 @@ export const AnnotationButton = observer(
           {!isPrediction && (
             <div className={cn("annotation-button").elem("icons").toClassName()}>
               {entity.draftId > 0 && (
-                <Tooltip title="Draft">
+                <Tooltip title="草稿">
                   <div className={cn("annotation-button").elem("icon").mod({ draft: true }).toClassName()}>
                     <IconDraftCreated2 color="#617ADA" />
                   </div>
                 </Tooltip>
               )}
               {entity.skipped && (
-                <Tooltip title="Skipped">
+                <Tooltip title="已跳过">
                   <div className={cn("annotation-button").elem("icon").mod({ skipped: true }).toClassName()}>
                     <IconAnnotationSkipped2 color="#DD0000" />
                   </div>
                 </Tooltip>
               )}
               {isGroundTruth && (
-                <Tooltip title="Ground-truth">
+                <Tooltip title="真值">
                   <div className={cn("annotation-button").elem("icon").mod({ groundTruth: true }).toClassName()}>
                     <IconAnnotationGroundTruth />
                   </div>

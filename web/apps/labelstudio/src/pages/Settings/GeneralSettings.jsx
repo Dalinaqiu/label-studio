@@ -19,29 +19,29 @@ export const GeneralSettings = () => {
   const colors = ["#FDFDFC", "#FF4C25", "#FF750F", "#ECB800", "#9AC422", "#34988D", "#617ADA", "#CC6FBE"];
 
   const samplings = [
-    { value: "Sequential", label: "Sequential", description: "Tasks are ordered by Task ID" },
-    { value: "Uniform", label: "Random", description: "Tasks are chosen with uniform random" },
+    { value: "Sequential", label: "顺序", description: "任务按任务 ID 顺序排列" },
+    { value: "Uniform", label: "随机", description: "任务以均匀随机方式选择" },
   ];
 
   return (
     <div className={cn("general-settings").toClassName()}>
       <div className={cn("general-settings").elem("wrapper").toClassName()}>
-        <h1>General Settings</h1>
+        <h1>常规设置</h1>
         <div className={cn("settings-wrapper").toClassName()}>
           <Form action="updateProject" formData={{ ...project }} params={{ pk: project.id }} onSubmit={updateProject}>
             <Form.Row columnCount={1} rowGap="16px">
-              <Input name="title" label="Project Name" />
+              <Input name="title" label="项目名称" />
 
-              <TextArea name="description" label="Description" style={{ minHeight: 128 }} />
+              <TextArea name="description" label="描述" style={{ minHeight: 128 }} />
               {isFF(FF_LSDV_E_297) && (
                 <div className={cn("workspace-placeholder").toClassName()}>
                   <div className={cn("workspace-placeholder").elem("badge-wrapper").toClassName()}>
-                    <div className={cn("workspace-placeholder").elem("title").toClassName()}>Workspace</div>
+                    <div className={cn("workspace-placeholder").elem("title").toClassName()}>工作区</div>
                     <EnterpriseBadge className="ml-2" />
                   </div>
-                  <Select placeholder="Select an option" disabled options={[]} />
+                  <Select placeholder="请选择" disabled options={[]} />
                   <Typography size="small" className="my-tight">
-                    Simplify project management by organizing projects into workspaces.{" "}
+                    通过将项目组织到工作区来简化项目管理。{" "}
                     <a
                       target="_blank"
                       href={createURL(
@@ -54,12 +54,12 @@ export const GeneralSettings = () => {
                       rel="noreferrer"
                       className="underline hover:no-underline"
                     >
-                      Learn more
+                      了解更多
                     </a>
                   </Typography>
                 </div>
               )}
-              <RadioGroup name="color" label="Color" size="large" labelProps={{ size: "large" }}>
+              <RadioGroup name="color" label="颜色" size="large" labelProps={{ size: "large" }}>
                 {colors.map((color) => (
                   <RadioGroup.Button key={color} value={color}>
                     <div className={cn("color").toClassName()} style={{ "--background": color }} />
@@ -67,12 +67,12 @@ export const GeneralSettings = () => {
                 ))}
               </RadioGroup>
 
-              <RadioGroup label="Task Sampling" labelProps={{ size: "large" }} name="sampling" simple>
+              <RadioGroup label="任务采样" labelProps={{ size: "large" }} name="sampling" simple>
                 {samplings.map(({ value, label, description }) => (
                   <RadioGroup.Button
                     key={value}
                     value={`${value} sampling`}
-                    label={`${label} sampling`}
+                    label={`${label}采样`}
                     description={description}
                   />
                 ))}
@@ -82,13 +82,13 @@ export const GeneralSettings = () => {
                     value=""
                     label={
                       <>
-                        Uncertainty sampling <EnterpriseBadge className="ml-2" />
+                        不确定性采样 <EnterpriseBadge className="ml-2" />
                       </>
                     }
                     disabled
                     description={
                       <>
-                        Tasks are chosen according to model uncertainty score (active learning mode).{" "}
+                        任务根据模型不确定性得分选择（主动学习模式）。{" "}
                         <a
                           target="_blank"
                           href={createURL("https://docs.humansignal.com/guide/active_learning", {
@@ -97,7 +97,7 @@ export const GeneralSettings = () => {
                           })}
                           rel="noreferrer"
                         >
-                          Learn more
+                          了解更多
                         </a>
                       </>
                     }
@@ -108,10 +108,10 @@ export const GeneralSettings = () => {
 
             <Form.Actions>
               <Form.Indicator>
-                <span case="success">Saved!</span>
+                <span case="success">已保存！</span>
               </Form.Indicator>
-              <Button type="submit" className="w-[150px]" aria-label="Save general settings">
-                Save
+              <Button type="submit" className="w-[150px]" aria-label="保存常规设置">
+                保存
               </Button>
             </Form.Actions>
           </Form>
@@ -122,6 +122,6 @@ export const GeneralSettings = () => {
   );
 };
 
-GeneralSettings.menuItem = "General";
+GeneralSettings.menuItem = "常规";
 GeneralSettings.path = "/";
 GeneralSettings.exact = true;

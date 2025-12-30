@@ -24,12 +24,11 @@ const configClass = cn("configure");
 
 const EmptyConfigPlaceholder = () => (
   <div className={configClass.elem("empty-config")}>
-    <p>Your labeling configuration is empty. It is required to label your data.</p>
+    <p>标注配置为空，标注数据前需要先进行配置。</p>
     <p>
-      Start from one of our predefined templates or create your own config on the Code panel. The labeling config is
-      XML-based and you can{" "}
+      你可以从预置模板开始，或在代码面板中创建自己的配置。标注配置基于 XML，你可以{" "}
       <a href="https://labelstud.io/tags/" target="_blank" rel="noreferrer">
-        read about the available tags in our documentation
+        在文档中了解可用标签
       </a>
       .
     </p>
@@ -66,7 +65,7 @@ const Label = ({ label, template, color }) => {
         size="smaller"
         variant="negative"
         onClick={() => template.removeLabel(label)}
-        aria-label="delete label"
+        aria-label="删除标签"
         className="hidden !p-0 z-10 absolute right-0 [&_span]:!p-0 group-hover:inline-flex"
         leading={<IconTrash className="w-4 h-4 fill-[currentColor]" />}
       />
@@ -96,8 +95,8 @@ const ConfigureControl = ({ control, template }) => {
   return (
     <div className={configClass.elem("labels")}>
       <form className={configClass.elem("add-labels")} action="">
-        <h4>{tagname === "Choices" ? "Add choices" : "Add label names"}</h4>
-        <span>Use new line as a separator to add multiple labels</span>
+        <h4>{tagname === "Choices" ? "添加选项" : "添加标签名称"}</h4>
+        <span>使用换行分隔，可一次添加多个标签</span>
         <textarea
           name="labels"
           id=""
@@ -107,13 +106,13 @@ const ConfigureControl = ({ control, template }) => {
           onKeyPress={onKeyPress}
           className="lsf-textarea-ls p-2 px-3"
         />
-        <Button type="button" size="small" look="outlined" onClick={onAddLabels} aria-label="Add labels">
-          Add
+        <Button type="button" size="small" look="outlined" onClick={onAddLabels} aria-label="添加标签">
+          添加
         </Button>
       </form>
       <div className={configClass.elem("current-labels")}>
         <h3>
-          {tagname === "Choices" ? "Choices" : "Labels"} ({control.children.length})
+          {tagname === "Choices" ? "选项" : "标签"}（{control.children.length}）
         </h3>
         <ul>
           {Array.from(control.children).map((label) => (
@@ -219,7 +218,7 @@ const ConfigureSettings = ({ template }) => {
   return (
     <ul className={configClass.elem("settings")}>
       <li>
-        <h4>Configure settings</h4>
+        <h4>配置设置</h4>
         <ul className={configClass.elem("object-settings")}>{items}</ul>
       </li>
     </ul>
@@ -280,13 +279,13 @@ const ConfigureColumn = ({ template, obj, columns }) => {
     const cols = (columns ?? []).map((col) => {
       return {
         value: col,
-        label: col === DEFAULT_COLUMN ? "<imported file>" : `$${col}`,
+        label: col === DEFAULT_COLUMN ? "<导入文件>" : `$${col}`,
       };
     });
     if (!columns?.length) {
-      cols.push({ value, label: "<imported file>" });
+      cols.push({ value, label: "<导入文件>" });
     }
-    cols.push({ value: "-", label: "<set manually>" });
+    cols.push({ value: "-", label: "<手动设置>" });
     return cols;
   }, [columns, DEFAULT_COLUMN, value]);
 
@@ -299,10 +298,10 @@ const ConfigureColumn = ({ template, obj, columns }) => {
         isInline={true}
         label={
           <>
-            Use {obj.tagName.toLowerCase()}
-            {template.objects > 1 && ` for ${obj.getAttribute("name")}`}
-            {" from "}
-            {columns?.length > 0 && columns[0] !== DEFAULT_COLUMN && "field "}
+            使用 {obj.tagName.toLowerCase()}
+            {template.objects > 1 && `（${obj.getAttribute("name")}）`}
+            {" 来自 "}
+            {columns?.length > 0 && columns[0] !== DEFAULT_COLUMN && "字段 "}
           </>
         }
         labelProps={{ className: "inline-flex" }}
@@ -318,14 +317,13 @@ const ConfigureColumns = ({ columns, template }) => {
 
   return (
     <div className={configClass.elem("object")}>
-      <h4>Configure data</h4>
+      <h4>配置数据</h4>
       {template.objects.length > 1 && columns?.length > 0 && columns.length < template.objects.length && (
-        <p className={configClass.elem("object-error")}>This template requires more data then you have for now</p>
+        <p className={configClass.elem("object-error")}>该模板需要的字段多于当前数据</p>
       )}
       {columns?.length === 0 && (
         <p className={configClass.elem("object-error")}>
-          To select which field(s) to label you need to upload the data. Alternatively, you can provide it using Code
-          mode.
+          要选择要标注的字段，需要先上传数据；也可以在代码模式中手动设置。
         </p>
       )}
       {template.objects.map((obj) => (
@@ -427,7 +425,7 @@ const Configurator = ({
         setTemplate(config);
       } catch (e) {
         setParserError({
-          detail: "Parser error",
+          detail: "解析错误",
           validation_errors: [e.message],
         });
       }
@@ -474,10 +472,10 @@ const Configurator = ({
 
   const extra = (
     <p className={configClass.elem("tags-link")}>
-      Configure the labeling interface with tags.
+      使用标签配置标注界面。
       <br />
       <a href="https://labelstud.io/tags/" target="_blank" rel="noreferrer">
-        See all available tags
+        查看全部可用标签
       </a>
       .
     </p>
@@ -486,7 +484,7 @@ const Configurator = ({
   return (
     <div className={configClass}>
       <div className={configClass.elem("container")}>
-        <h1>Labeling Interface{hasChanges ? " *" : ""}</h1>
+        <h1>标注界面{hasChanges ? " *" : ""}</h1>
         <header>
           <Button
             type="button"
@@ -494,11 +492,11 @@ const Configurator = ({
             onClick={onBrowse}
             size="small"
             look="outlined"
-            aria-label="Browse templates"
+            aria-label="浏览模板"
           >
-            Browse Templates
+            浏览模板
           </Button>
-          <ToggleItems items={{ code: "Code", visual: "Visual" }} active={configure} onSelect={onSelect} />
+          <ToggleItems items={{ code: "代码", visual: "可视化" }} active={configure} onSelect={onSelect} />
         </header>
         <div className={configClass.elem("editor")}>
           {configure === "code" && (
@@ -551,7 +549,7 @@ const Configurator = ({
           <Form.Actions size="small" extra={configure === "code" && extra} valid>
             {saved && (
               <div className={cn("form-indicator").toClassName()}>
-                <span className={cn("form-indicator").elem("item").mod({ type: "success" }).toClassName()}>Saved!</span>
+                <span className={cn("form-indicator").elem("item").mod({ type: "success" }).toClassName()}>已保存！</span>
               </div>
             )}
             <Button
@@ -559,9 +557,9 @@ const Configurator = ({
               className="w-[120px]"
               onClick={onSave}
               waiting={waiting}
-              aria-label="Save configuration"
+              aria-label="保存配置"
             >
-              {waiting ? "Saving..." : "Save"}
+              {waiting ? "保存中..." : "保存"}
             </Button>
             {isFF(FF_UNSAVED_CHANGES) && <UnsavedChanges hasChanges={hasChanges} onSave={onSave} />}
           </Form.Actions>

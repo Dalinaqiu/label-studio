@@ -49,7 +49,7 @@ export const ResultItem: FC<{ result: any }> = observer(({ result }) => {
     if (type === "rating") {
       return (
         <div className={cn("region-meta").elem("result").toClassName()}>
-          <Typography size="small">Rating: </Typography>
+          <Typography size="small">评分：</Typography>
           <div className={cn("region-meta").elem("value").toClassName()}>
             <RatingResult mainValue={mainValue} />
           </div>
@@ -59,7 +59,7 @@ export const ResultItem: FC<{ result: any }> = observer(({ result }) => {
     if (type === "textarea") {
       return (
         <div className={cn("region-meta").elem("result").toClassName()}>
-          <Typography size="small">Text: </Typography>
+          <Typography size="small">文本：</Typography>
           <div className={cn("region-meta").elem("value").toClassName()}>
             <TextResult mainValue={mainValue} />
           </div>
@@ -69,7 +69,7 @@ export const ResultItem: FC<{ result: any }> = observer(({ result }) => {
     if (type === "choices") {
       return (
         <div className={cn("region-meta").elem("result").toClassName()}>
-          <Typography size="small">Choices: </Typography>
+          <Typography size="small">选项：</Typography>
           <div className={cn("region-meta").elem("value").toClassName()}>
             <ChoicesResult mainValue={mainValue} />
           </div>
@@ -79,7 +79,7 @@ export const ResultItem: FC<{ result: any }> = observer(({ result }) => {
     if (type === "taxonomy") {
       return (
         <div className={cn("region-meta").elem("result").toClassName()}>
-          <Typography size="small">Taxonomy: </Typography>
+          <Typography size="small">分类：</Typography>
           <div className={cn("region-meta").elem("value").toClassName()}>
             <ChoicesResult mainValue={mainValue.map((v: string[]) => v.join("/"))} />
           </div>
@@ -147,7 +147,7 @@ export const RegionDetailsMeta: FC<RegionDetailsMetaProps> = observer(
         {editMode ? (
           <textarea
             ref={(el) => (input.current = el)}
-            placeholder="Meta"
+            placeholder="元数据"
             className={cn("detailed-region").elem("meta-text").toClassName()}
             value={region.meta.text}
             onChange={(e) => saveMeta(e.target.value)}
