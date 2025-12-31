@@ -2,7 +2,7 @@ name: Build and Push to Aliyun ACR
 
 on:
   push:
-    branches: [ "main" ] # 监听 main 分支的推送
+    branches: ["main"]
 
 jobs:
   build-and-push:
@@ -26,8 +26,6 @@ jobs:
         with:
           context: .
           push: true
-          # 自动打上 latest 标签
           tags: ${{ secrets.ALIYUN_REGISTRY }}/${{ secrets.ALIYUN_NAMESPACE }}/label-studio:latest
-          # 启用构建缓存，加速后续构建
           cache-from: type=gha
           cache-to: type=gha,mode=max
