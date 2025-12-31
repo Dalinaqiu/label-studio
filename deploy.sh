@@ -3,8 +3,12 @@
 
 
 docker pull crpi-hofueqocrqo2ysht.cn-heyuan.personal.cr.aliyuncs.com/liqiu19951112/label-studio:latest
-docker rm -f ls-app
-docker run -d -p 8080:8080 --name ls-app -v /data/ls:/label-studio/data registry.cn-hangzhou.aliyuncs.com/my-ls-project/label-studio:latest
+if docker ps -a --format '{{.Names}}' | grep -q '^ls-app$'; then
+  docker rm -f ls-app
+fi
+mkdir -p /data/ls
+chown -R 1001:1001 /data/ls
+docker run -d -p 8080:8080 --name ls-app -v /data/ls:/label-studio/data crpi-hofueqocrqo2ysht.cn-heyuan.personal.cr.aliyuncs.com/liqiu19951112/label-studio:latest
 
 
 # 监听程序
