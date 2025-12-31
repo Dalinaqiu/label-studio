@@ -8,12 +8,7 @@ on:
       - reopened
       - synchronize
       - ready_for_review
-    branches:
-      - master
-      - develop
-      - 'release/**'
-      - 'lse-release/**'
-      - 'ls-release/**'
+    branches: ["main"]
 
 env:
   ACTIONS_STEP_DEBUG: '${{ secrets.ACTIONS_STEP_DEBUG }}'

@@ -8,9 +8,7 @@ on:
       - converted_to_draft
       - ready_for_review
       - synchronize
-    branches:
-      - develop
-      - 'lse-release/**'
+    branches: ["main"]
     paths-ignore:
       - 'label_studio/frontend/**'
       - 'docs/**'

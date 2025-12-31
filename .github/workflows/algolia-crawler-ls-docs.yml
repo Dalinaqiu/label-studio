@@ -2,7 +2,7 @@ name: Algolia Indexer for Label Studio Docs
 
 on:
   push:
-    branches: ["develop"]
+    branches: ["main"]
     paths:
       - "docs/**"
       - ".github/workflows/algolia-crawler-ls-docs.yml"

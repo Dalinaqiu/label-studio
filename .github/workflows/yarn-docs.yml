@@ -13,8 +13,7 @@ on:
         type: string
         required: true
   push:
-    branches:
-      - develop
+    branches: ["main"]
     paths:
       - "web/**"
       - ".github/workflows/yarn-docs.yml"

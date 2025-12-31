@@ -6,8 +6,7 @@ on:
       - closed
       - converted_to_draft
       - locked
-    branches:
-      - develop
+    branches: ["main"]
 
 concurrency:
   group: CI/CD Pipeline-${{ github.event.pull_request.number || github.event.pull_request.head.ref || github.ref_name }}

@@ -2,7 +2,7 @@ name: Check for broken links
 
 on:
   pull_request:
-    branches: ["develop"]
+    branches: ["main"]
     types: [synchronize, opened]
     paths:
       - "docs/**"

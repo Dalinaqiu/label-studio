@@ -2,8 +2,7 @@ name: "CI/CD Pipeline Develop"
 
 on:
   push:
-    branches:
-      - develop
+    branches: ["main"]
 
 concurrency:
   group: "CI/CD Pipeline-develop"

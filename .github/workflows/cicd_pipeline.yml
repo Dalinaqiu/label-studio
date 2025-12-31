@@ -2,17 +2,14 @@ name: "CI/CD Pipeline"
 
 on:
   push:
-    branches:
-      - 'ls-release/**'
+    branches: ["main"]
   pull_request:
     types:
       - opened
       - synchronize
       - reopened
       - ready_for_review
-    branches:
-      - develop
-      - 'ls-release/**'
+    branches: ["main"]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.event.pull_request.head.ref || github.ref }}

@@ -2,18 +2,14 @@ name: "Dependencies check"
 
 on:
   push:
-    branches:
-      - develop
-      - 'ls-release/**'
+    branches: ["main"]
   pull_request:
     types:
       - opened
       - synchronize
       - reopened
       - ready_for_review
-    branches:
-      - develop
-      - 'ls-release/**'
+    branches: ["main"]
 
 env:
   ACTIONS_STEP_DEBUG: '${{ secrets.ACTIONS_STEP_DEBUG }}'

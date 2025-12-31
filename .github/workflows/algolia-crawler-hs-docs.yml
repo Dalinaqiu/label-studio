@@ -2,7 +2,7 @@ name: Algolia Indexer for HumanSignal Docs
 
 on:
   push:
-    branches: ["develop"]
+    branches: ["main"]
     paths:
       - "docs/**"
       - ".github/workflows/algolia-crawler-hs-docs.yml"

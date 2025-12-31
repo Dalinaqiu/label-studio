@@ -8,9 +8,7 @@ on:
       - reopened
       - synchronize
       - ready_for_review
-    branches:
-      - develop
-      - 'ls-release/**'
+    branches: ["main"]
   merge_group:
 
 env:
