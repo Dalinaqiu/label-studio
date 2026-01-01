@@ -127,6 +127,9 @@ INTERNAL_PORT = '8080'
 DEBUG = get_bool_env('DEBUG', True)
 DEBUG_MODAL_EXCEPTIONS = get_bool_env('DEBUG_MODAL_EXCEPTIONS', True)
 
+# Disable COOP to avoid browser warnings when served over HTTP.
+SECURE_CROSS_ORIGIN_OPENER_POLICY = None
+
 # Whether to verify SSL certs when making external requests, eg in the uploader
 # ⚠️ Turning this off means assuming risk. ⚠️
 # Overridable at organization level via Organization#verify_ssl_certs
