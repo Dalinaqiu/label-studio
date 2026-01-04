@@ -250,6 +250,12 @@ body {
   fill: var(--color-orange-400);
 }
 
+.HeaderLogo img {
+  height: 22px;
+  width: auto;
+  display: block;
+}
+
 @media (max-width: 400px) {
   .page-header-content-switcher {
     display: none;
@@ -358,7 +364,7 @@ body {
 
 @media (max-width: 400px) {
 
-  .HeaderLogo svg {
+  .HeaderLogo img {
     width: 13em;
     height: auto;
   }
