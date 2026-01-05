@@ -1,8 +1,6 @@
 name: "Update Feature Flags"
 
 on:
-  schedule:
-    - cron: '0 6 * * 1-5'
   workflow_call:
     inputs:
       ref:

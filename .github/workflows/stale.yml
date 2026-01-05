@@ -7,8 +7,6 @@ name: "Close stale issues and PRs"
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "30 1 * * *" # At 01:30
 
 #env:
 #  CLOSE_ISSUE_MESSAGE: >
