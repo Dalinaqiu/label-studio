@@ -2,8 +2,6 @@ name: "Build PyPI Nightly"
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '0 0 * * 1-5'  # Run at midnight UTC Monday through Friday
 
 jobs:
   calculate-version:

@@ -1,8 +1,6 @@
 name: "Slack Invite Checker"
 
 on:
-  schedule:
-    - cron: '0 */6 * * *' # At minute 0 past every 6th hour.
   workflow_dispatch:
 
 env:
