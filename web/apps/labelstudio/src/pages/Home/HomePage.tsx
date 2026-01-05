@@ -206,7 +206,7 @@ export const HomePage: Page = () => {
           </SimpleCard>
         </section>
         <section className="flex flex-col gap-6">
-          <HeidiTips collection="projectSettings" />
+          {/* <HeidiTips collection="projectSettings" />
           <SimpleCard title="资源" description="学习、探索并获取帮助" data-testid="resources-card">
             <ul>
               {resources.map((link) => {
@@ -229,7 +229,7 @@ export const HomePage: Page = () => {
           <div className="flex gap-2 items-center">
             <IconHumanSignal />
             <span className="text-neutral-content-subtle">Label Studio 版本：社区版</span>
-          </div>
+          </div> */}
         </section>
       </div>
       {modalIsOpen && <CreateProject onClose={() => setModalIsOpen(false)} />}
