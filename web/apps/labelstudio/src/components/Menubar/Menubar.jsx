@@ -232,7 +232,7 @@ export const Menubar = ({ enabled, defaultOpened, defaultPinned, children, onSid
 
                 <VersionNotifier showNewVersion />
 
-                <Menu.Item
+                {/* <Menu.Item
                   label="API 文档"
                   href="https://api.labelstud.io/api-reference/introduction/getting-started"
                   icon={<IconTerminal />}
@@ -252,9 +252,9 @@ export const Menubar = ({ enabled, defaultOpened, defaultPinned, children, onSid
                   icon={<IconSlack />}
                   target="_blank"
                   rel="noreferrer"
-                />
+                /> */}
 
-                <VersionNotifier showCurrentVersion />
+                {/* <VersionNotifier showCurrentVersion /> */}
 
                 <Menu.Divider />
 
