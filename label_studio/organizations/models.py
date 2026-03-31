@@ -18,11 +18,30 @@ OrganizationMemberMixin = load_func(settings.ORGANIZATION_MEMBER_MIXIN)
 class OrganizationMember(OrganizationMemberMixin, models.Model):
     """ """
 
+    class Role(models.TextChoices):
+        OWNER = 'OW', _('Owner')
+        ADMIN = 'AD', _('Administrator')
+        MANAGER = 'MA', _('Manager')
+        REVIEWER = 'RE', _('Reviewer')
+        ANNOTATOR = 'AN', _('Annotator')
+        VIEWER = 'VI', _('Viewer')
+        NOT_ACTIVATED = 'NO', _('Pending')
+        DEACTIVATED = 'DI', _('Deactivated')
+
+    MANAGEABLE_ROLES = {Role.OWNER, Role.ADMIN, Role.MANAGER}
+
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='om_through', help_text='User ID'
     )
     organization = models.ForeignKey(
         'organizations.Organization', on_delete=models.CASCADE, help_text='Organization ID'
+    )
+    role = models.CharField(
+        _('role'),
+        max_length=2,
+        choices=Role.choices,
+        default=Role.ANNOTATOR,
+        help_text='Organization membership role',
     )
 
     created_at = models.DateTimeField(_('created at'), auto_now_add=True)
@@ -53,7 +72,15 @@ class OrganizationMember(OrganizationMemberMixin, models.Model):
 
     @cached_property
     def is_owner(self):
-        return self.user.id == self.organization.created_by.id
+        return self.role == self.Role.OWNER or self.user.id == self.organization.created_by.id
+
+    @cached_property
+    def is_admin(self):
+        return self.role in self.MANAGEABLE_ROLES or self.is_owner
+
+    @property
+    def role_name(self):
+        return self.get_role_display()
 
     class Meta:
         ordering = ['pk']
@@ -143,7 +170,7 @@ class Organization(OrganizationMixin, models.Model):
             return
 
         with transaction.atomic():
-            om = OrganizationMember(user=user, organization=self)
+            om = OrganizationMember(user=user, organization=self, role=OrganizationMember.Role.ANNOTATOR)
             om.save()
 
             return om

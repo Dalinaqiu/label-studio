@@ -1,51 +1,48 @@
-import { Button } from "@humansignal/ui";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useUpdatePageTitle } from "@humansignal/core";
+import { IconPlus } from "@humansignal/icons";
+import { Button, useToast } from "@humansignal/ui";
+import { TokenSettingsModal } from "@humansignal/app-common/blocks/TokenSettingsModal";
 import { HeidiTips } from "../../../components/HeidiTips/HeidiTips";
 import { modal } from "../../../components/Modal/Modal";
 import { Space } from "../../../components/Space/Space";
 import { cn } from "../../../utils/bem";
 import { FF_AUTH_TOKENS, FF_LSDV_E_297, isFF } from "../../../utils/feature-flags";
-import "./PeopleInvitation.scss";
-import { PeopleList } from "./PeopleList";
-import "./PeoplePage.scss";
-import { TokenSettingsModal } from "@humansignal/app-common/blocks/TokenSettingsModal";
-import { IconPlus } from "@humansignal/icons";
-import { useToast } from "@humansignal/ui";
 import { InviteLink } from "./InviteLink";
+import { PeopleList } from "./PeopleList";
 import { SelectedUser } from "./SelectedUser";
+import "./PeopleInvitation.scss";
+import "./PeoplePage.scss";
 
 export const PeoplePage = () => {
   const apiSettingsModal = useRef();
   const toast = useToast();
   const [selectedUser, setSelectedUser] = useState(null);
   const [invitationOpen, setInvitationOpen] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const organizationId = useMemo(() => APP_SETTINGS.user?.active_organization ?? 1, []);
 
-  useUpdatePageTitle("成员");
+  useUpdatePageTitle("Organization Members");
 
-  const selectUser = useCallback(
-    (user) => {
-      setSelectedUser(user);
-
-      localStorage.setItem("selectedUser", user?.id);
-    },
-    [setSelectedUser],
-  );
+  const selectUser = useCallback((user) => {
+    setSelectedUser(user);
+    localStorage.setItem("selectedUser", user?.id ?? "");
+  }, []);
 
   const apiTokensSettingsModalProps = useMemo(
     () => ({
-      title: "API Token 设置",
+      title: "API Token Settings",
       style: { width: 480 },
       body: () => (
         <TokenSettingsModal
           onSaved={() => {
-            toast.show({ message: "API Token 已保存" });
+            toast.show({ message: "API token updated" });
             apiSettingsModal.current?.close();
           }}
         />
       ),
     }),
-    [],
+    [toast],
   );
 
   const showApiTokenSettingsModal = useCallback(() => {
@@ -65,29 +62,35 @@ export const PeoplePage = () => {
 
           <Space>
             {isFF(FF_AUTH_TOKENS) && (
-              <Button look="outlined" onClick={showApiTokenSettingsModal} aria-label="打开 API Token 设置">
-                API Token 设置
+              <Button look="outlined" onClick={showApiTokenSettingsModal} aria-label="Open API token settings">
+                API Token Settings
               </Button>
             )}
-            <Button
-              leading={<IconPlus className="!h-4" />}
-              onClick={() => setInvitationOpen(true)}
-              aria-label="添加成员"
-            >
-              添加成员
+            <Button leading={<IconPlus className="!h-4" />} onClick={() => setInvitationOpen(true)} aria-label="Invite people">
+              Invite People
             </Button>
           </Space>
         </Space>
       </div>
       <div className={cn("people").elem("content").toClassName()}>
         <PeopleList
+          organizationId={organizationId}
+          refreshKey={refreshKey}
           selectedUser={selectedUser}
           defaultSelected={defaultSelected}
-          onSelect={(user) => selectUser(user)}
+          onSelect={selectUser}
         />
 
         {selectedUser ? (
-          <SelectedUser user={selectedUser} onClose={() => selectUser(null)} />
+          <SelectedUser
+            user={selectedUser}
+            organizationId={organizationId}
+            onClose={() => selectUser(null)}
+            onRoleChange={(user) => {
+              selectUser(user);
+              setRefreshKey((key) => key + 1);
+            }}
+          />
         ) : (
           isFF(FF_LSDV_E_297) && <HeidiTips collection="organizationPage" />
         )}
@@ -95,7 +98,6 @@ export const PeoplePage = () => {
       <InviteLink
         opened={invitationOpen}
         onClosed={() => {
-          console.log("hidden");
           setInvitationOpen(false);
         }}
       />
@@ -103,5 +105,5 @@ export const PeoplePage = () => {
   );
 };
 
-PeoplePage.title = "成员";
+PeoplePage.title = "Organization Members";
 PeoplePage.path = "/";

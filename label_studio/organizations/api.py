@@ -16,6 +16,7 @@ from organizations.serializers import (
     OrganizationInviteSerializer,
     OrganizationMemberListParamsSerializer,
     OrganizationMemberListSerializer,
+    OrganizationMemberRoleSerializer,
     OrganizationMemberSerializer,
     OrganizationSerializer,
 )
@@ -246,16 +247,17 @@ class OrganizationMemberListAPI(generics.ListAPIView):
 class OrganizationMemberDetailAPI(GetParentObjectMixin, generics.RetrieveDestroyAPIView):
     permission_required = ViewClassPermission(
         GET=all_permissions.organizations_view,
+        PATCH=all_permissions.organizations_change,
         DELETE=all_permissions.organizations_change,
     )
     parent_queryset = Organization.objects.all()
     parser_classes = (JSONParser, FormParser, MultiPartParser)
     serializer_class = OrganizationMemberSerializer
-    http_method_names = ['delete', 'get']
+    http_method_names = ['delete', 'get', 'patch']
 
     @property
     def permission_classes(self):
-        if self.request.method == 'DELETE':
+        if self.request.method in {'DELETE', 'PATCH'}:
             return [IsAuthenticated, HasObjectPermission]
         return api_settings.DEFAULT_PERMISSION_CLASSES
 
@@ -288,9 +290,42 @@ class OrganizationMemberDetailAPI(GetParentObjectMixin, generics.RetrieveDestroy
 
         if member.user_id == request.user.id:
             return Response({'detail': 'User cannot soft delete self'}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+        if member.is_owner:
+            return Response({'detail': 'Owner cannot be deleted'}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
         member.soft_delete()
         return Response(status=204)  # 204 No Content is a common HTTP status for successful delete requests
+
+    def patch(self, request, pk=None, user_pk=None):
+        org = self.parent_object
+        if org != request.user.active_organization:
+            raise PermissionDenied('You can update members only for your current active organization')
+        if not request.user.is_organization_admin(org.pk):
+            raise PermissionDenied('You do not have permission to update member roles')
+
+        user = get_object_or_404(User, pk=user_pk)
+        member = get_object_or_404(OrganizationMember, user=user, organization=org)
+        if member.deleted_at is not None:
+            raise NotFound('Member not found')
+
+        serializer = OrganizationMemberRoleSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        next_role = serializer.validated_data['role']
+
+        if member.is_owner and next_role != OrganizationMember.Role.OWNER:
+            return Response({'detail': 'Owner role cannot be changed'}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+        if member.user_id == request.user.id and next_role not in (
+            OrganizationMember.Role.OWNER,
+            OrganizationMember.Role.ADMIN,
+            OrganizationMember.Role.MANAGER,
+        ):
+            return Response({'detail': 'You cannot demote yourself below manager'}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+
+        member.role = next_role
+        member.save(update_fields=['role', 'updated_at'])
+
+        response_serializer = self.get_serializer(member)
+        return Response(response_serializer.data, status=status.HTTP_200_OK)
 
 
 @method_decorator(

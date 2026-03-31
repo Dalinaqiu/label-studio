@@ -3,6 +3,7 @@
 from core.permissions import all_permissions
 from core.utils.common import load_func
 from django.conf import settings
+from organizations.models import OrganizationMember
 from rest_flex_fields import FlexFieldsModelSerializer
 from rest_framework import serializers
 from users.models import User
@@ -103,12 +104,91 @@ class BaseUserSerializerUpdate(BaseUserSerializer):
 
 class BaseWhoAmIUserSerializer(BaseUserSerializer):
     permissions = serializers.SerializerMethodField()
+    current_role = serializers.SerializerMethodField()
 
     class Meta(BaseUserSerializer.Meta):
-        fields = BaseUserSerializer.Meta.fields + ('permissions',)
+        fields = BaseUserSerializer.Meta.fields + ('permissions', 'current_role')
+
+    ROLE_PERMISSIONS = {
+        OrganizationMember.Role.OWNER: [perm for _, perm in all_permissions],
+        OrganizationMember.Role.ADMIN: [perm for _, perm in all_permissions if perm != all_permissions.organizations_delete],
+        OrganizationMember.Role.MANAGER: [
+            all_permissions.organizations_view,
+            all_permissions.organizations_change,
+            all_permissions.organizations_invite,
+            all_permissions.projects_create,
+            all_permissions.projects_view,
+            all_permissions.projects_change,
+            all_permissions.tasks_view,
+            all_permissions.tasks_change,
+            all_permissions.annotations_view,
+            all_permissions.annotations_change,
+            all_permissions.views_view,
+            all_permissions.views_create,
+            all_permissions.views_change,
+            all_permissions.views_delete,
+            all_permissions.views_reset,
+            all_permissions.labels_view,
+            all_permissions.labels_create,
+            all_permissions.labels_change,
+            all_permissions.webhooks_view,
+            all_permissions.storages_view,
+            all_permissions.actions_perform,
+            all_permissions.predictions_any,
+        ],
+        OrganizationMember.Role.REVIEWER: [
+            all_permissions.organizations_view,
+            all_permissions.projects_view,
+            all_permissions.tasks_view,
+            all_permissions.annotations_view,
+            all_permissions.annotations_change,
+            all_permissions.views_view,
+            all_permissions.labels_view,
+            all_permissions.predictions_any,
+        ],
+        OrganizationMember.Role.ANNOTATOR: [
+            all_permissions.organizations_view,
+            all_permissions.projects_view,
+            all_permissions.tasks_view,
+            all_permissions.annotations_create,
+            all_permissions.annotations_view,
+            all_permissions.annotations_change,
+            all_permissions.views_view,
+            all_permissions.predictions_any,
+        ],
+        OrganizationMember.Role.VIEWER: [
+            all_permissions.organizations_view,
+            all_permissions.projects_view,
+            all_permissions.tasks_view,
+            all_permissions.annotations_view,
+            all_permissions.views_view,
+        ],
+        OrganizationMember.Role.NOT_ACTIVATED: [all_permissions.organizations_view],
+        OrganizationMember.Role.DEACTIVATED: [],
+    }
+
+    def _get_current_membership(self, user):
+        org_id = user.active_organization_id
+        if not org_id:
+            return None
+        return user.om_through.filter(organization_id=org_id, deleted_at__isnull=True).first()
 
     def get_permissions(self, user) -> list[str]:
-        return [perm for _, perm in all_permissions]
+        if user.is_superuser:
+            return [perm for _, perm in all_permissions]
+        membership = self._get_current_membership(user)
+        if membership is None:
+            return []
+        return self.ROLE_PERMISSIONS.get(membership.role, [])
+
+    def get_current_role(self, user):
+        membership = self._get_current_membership(user)
+        if membership is None:
+            return None
+        return {
+            'code': membership.role,
+            'label': membership.get_role_display(),
+        }
 
 
 class UserSimpleSerializer(BaseUserSerializer):

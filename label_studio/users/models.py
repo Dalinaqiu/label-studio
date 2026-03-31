@@ -177,7 +177,10 @@ class User(UserMixin, AbstractBaseUser, PermissionsMixin, UserLastActivityMixin)
                 return settings.HOSTNAME + self.avatar.url
 
     def is_organization_admin(self, org_pk):
-        return True
+        membership = self.om_through.filter(organization_id=org_pk, deleted_at__isnull=True).first()
+        if membership is None:
+            return False
+        return membership.is_admin
 
     def active_organization_annotations(self):
         return self.annotations.filter(project__organization=self.active_organization)

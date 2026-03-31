@@ -1,9 +1,20 @@
+import { useMemo, useState } from "react";
 import { format } from "date-fns";
 import { NavLink } from "react-router-dom";
 import { IconCross } from "@humansignal/icons";
-import { Userpic, Button } from "@humansignal/ui";
+import { Button, Userpic, useToast } from "@humansignal/ui";
 import { cn } from "../../../utils/bem";
+import { useAPI } from "../../../providers/ApiProvider";
 import "./SelectedUser.scss";
+
+const ROLE_OPTIONS = [
+  { value: "OW", label: "所有者" },
+  { value: "AD", label: "管理员" },
+  { value: "MA", label: "经理" },
+  { value: "RE", label: "审核员" },
+  { value: "AN", label: "标注员" },
+  { value: "VI", label: "查看者" },
+];
 
 const UserProjectsLinks = ({ projects }) => {
   return (
@@ -22,11 +33,44 @@ const UserProjectsLinks = ({ projects }) => {
   );
 };
 
-export const SelectedUser = ({ user, onClose }) => {
+export const SelectedUser = ({ user, organizationId, onClose, onRoleChange }) => {
+  const api = useAPI();
+  const toast = useToast();
+  const [role, setRole] = useState(user.role);
+  const [saving, setSaving] = useState(false);
   const fullName = [user.first_name, user.last_name]
     .filter((n) => !!n)
     .join(" ")
     .trim();
+
+  const canEditRole = !user.is_owner;
+  const selectedRoleLabel = useMemo(() => ROLE_OPTIONS.find((item) => item.value === role)?.label ?? user.role_name, [role, user.role_name]);
+
+  const saveRole = async () => {
+    setSaving(true);
+
+    const response = await api.callApi("updateUserMembership", {
+      params: {
+        pk: organizationId,
+        userPk: user.id,
+      },
+      data: {
+        role,
+      },
+    });
+
+    setSaving(false);
+
+    if (response?.role) {
+      toast.show({ message: "Member role updated" });
+      onRoleChange?.({
+        ...user,
+        role: response.role,
+        role_name: response.role_name,
+        is_owner: response.is_owner,
+      });
+    }
+  };
 
   return (
     <div className={cn("user-info").toClassName()}>
@@ -34,7 +78,7 @@ export const SelectedUser = ({ user, onClose }) => {
         look="string"
         onClick={onClose}
         className="absolute top-[20px] right-[24px]"
-        aria-label="关闭用户详情"
+        aria-label="Close user details"
       >
         <IconCross />
       </Button>
@@ -47,30 +91,53 @@ export const SelectedUser = ({ user, onClose }) => {
         </div>
       </div>
 
+      <div className={cn("user-info").elem("section").toClassName()}>
+        <div className={cn("user-info").elem("section-title").toClassName()}>Role</div>
+        {canEditRole ? (
+          <div className={cn("user-info").elem("role-editor").toClassName()}>
+            <select
+              className={cn("user-info").elem("role-select").toClassName()}
+              value={role}
+              onChange={(event) => setRole(event.target.value)}
+              disabled={saving}
+            >
+              {ROLE_OPTIONS.map((item) => (
+                <option key={item.value} value={item.value}>
+                  {item.label}
+                </option>
+              ))}
+            </select>
+            <Button size="small" onClick={saveRole} disabled={saving || role === user.role}>
+              Save
+            </Button>
+          </div>
+        ) : (
+          <div>{selectedRoleLabel}</div>
+        )}
+      </div>
+
       {user.phone && (
         <div className={cn("user-info").elem("section").toClassName()}>
           <a href={`tel:${user.phone}`}>{user.phone}</a>
         </div>
       )}
 
-      {!!user.created_projects.length && (
+      {!!user.created_projects?.length && (
         <div className={cn("user-info").elem("section").toClassName()}>
-          <div className={cn("user-info").elem("section-title").toClassName()}>创建的项目</div>
-
+          <div className={cn("user-info").elem("section-title").toClassName()}>Created Projects</div>
           <UserProjectsLinks projects={user.created_projects} />
         </div>
       )}
 
-      {!!user.contributed_to_projects.length && (
+      {!!user.contributed_to_projects?.length && (
         <div className={cn("user-info").elem("section").toClassName()}>
-          <div className={cn("user-info").elem("section-title").toClassName()}>参与的项目</div>
-
+          <div className={cn("user-info").elem("section-title").toClassName()}>Contributed Projects</div>
           <UserProjectsLinks projects={user.contributed_to_projects} />
         </div>
       )}
 
       <p className={cn("user-info").elem("last-active").toClassName()}>
-        最近活跃： {format(new Date(user.last_activity), "yyyy-MM-dd HH:mm")}
+        Last active at {format(new Date(user.last_activity), "yyyy-MM-dd HH:mm")}
       </p>
     </div>
   );

@@ -28,11 +28,15 @@ class TestOrganizationMemberListAPI(APITestCase):
 
         owner = response.json()['results'][0]
         assert owner['user']['id'] == self.owner.id
+        assert owner['role'] == 'OW'
+        assert owner['role_name'] == 'Owner'
         assert owner['user']['created_projects'] is None
         assert owner['user']['contributed_to_projects'] is None
 
         user_1 = response.json()['results'][1]
         assert user_1['user']['id'] == self.user_1.id
+        assert user_1['role'] == 'AN'
+        assert user_1['role_name'] == 'Annotator'
         assert user_1['user']['created_projects'] is None
         assert user_1['user']['contributed_to_projects'] is None
 
@@ -91,3 +95,16 @@ class TestOrganizationMemberListAPI(APITestCase):
                 'title': project_2.title,
             }
         ]
+
+    def test_update_member_role(self):
+        self.client.force_authenticate(user=self.owner)
+
+        response = self.client.patch(
+            f'/api/organizations/{self.organization.id}/memberships/{self.user_1.id}/',
+            {'role': 'RE'},
+            format='json',
+        )
+
+        assert response.status_code == 200
+        assert response.json()['role'] == 'RE'
+        assert response.json()['role_name'] == 'Reviewer'

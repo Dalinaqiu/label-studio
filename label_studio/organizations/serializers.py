@@ -51,10 +51,12 @@ class UserOrganizationMemberListSerializer(UserSerializer):
 
 class OrganizationMemberListSerializer(DynamicFieldsMixin, serializers.ModelSerializer):
     user = UserOrganizationMemberListSerializer()
+    role_name = serializers.CharField(source='get_role_display', read_only=True)
+    is_owner = serializers.BooleanField(read_only=True)
 
     class Meta:
         model = OrganizationMember
-        fields = ['id', 'organization', 'user']
+        fields = ['id', 'organization', 'user', 'role', 'role_name', 'is_owner']
 
 
 # =========================================
@@ -63,6 +65,8 @@ class OrganizationMemberListSerializer(DynamicFieldsMixin, serializers.ModelSeri
 class OrganizationMemberSerializer(DynamicFieldsMixin, serializers.ModelSerializer):
     annotations_count = serializers.SerializerMethodField(read_only=True)
     contributed_projects_count = serializers.SerializerMethodField(read_only=True)
+    role_name = serializers.CharField(source='get_role_display', read_only=True)
+    is_owner = serializers.BooleanField(read_only=True)
 
     def get_annotations_count(self, member):
         org = self.context.get('organization')
@@ -74,7 +78,20 @@ class OrganizationMemberSerializer(DynamicFieldsMixin, serializers.ModelSerializ
 
     class Meta:
         model = OrganizationMember
-        fields = ['user', 'organization', 'contributed_projects_count', 'annotations_count', 'created_at']
+        fields = [
+            'user',
+            'organization',
+            'role',
+            'role_name',
+            'is_owner',
+            'contributed_projects_count',
+            'annotations_count',
+            'created_at',
+        ]
+
+
+class OrganizationMemberRoleSerializer(serializers.Serializer):
+    role = serializers.ChoiceField(choices=OrganizationMember.Role.choices)
 
 
 class OrganizationInviteSerializer(serializers.Serializer):
