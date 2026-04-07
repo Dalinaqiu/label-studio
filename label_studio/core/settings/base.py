@@ -14,6 +14,7 @@ import logging
 import os
 import re
 from datetime import timedelta
+from urllib.parse import urlsplit
 
 from django.core.exceptions import ImproperlyConfigured
 
@@ -805,6 +806,24 @@ if get_env('STORAGE_TYPE') == 'gcs':
 CSRF_TRUSTED_ORIGINS = get_env('CSRF_TRUSTED_ORIGINS', [])
 if CSRF_TRUSTED_ORIGINS:
     CSRF_TRUSTED_ORIGINS = CSRF_TRUSTED_ORIGINS.split(',')
+
+def _append_csrf_trusted_origin(origin):
+    parsed_origin = urlsplit(origin)
+    if parsed_origin.scheme and parsed_origin.netloc:
+        normalized_origin = f'{parsed_origin.scheme}://{parsed_origin.netloc}'
+        if normalized_origin not in CSRF_TRUSTED_ORIGINS:
+            CSRF_TRUSTED_ORIGINS.append(normalized_origin)
+
+
+# In local development auth forms can be served from a webpack dev server on 8010
+# and proxied to Django on 8080. Trust those origins so CSRF origin checks don't
+# break signup/login when the backend is started without sourcing .env first.
+if DEBUG:
+    for local_frontend_origin in ('http://localhost:8010', 'http://127.0.0.1:8010'):
+        _append_csrf_trusted_origin(local_frontend_origin)
+
+if FRONTEND_HOSTNAME:
+    _append_csrf_trusted_origin(FRONTEND_HOSTNAME)
 
 # Custom S3 endpoints on these domains will get detailed error reporting
 S3_TRUSTED_STORAGE_DOMAINS = get_env_list(

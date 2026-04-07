@@ -3,6 +3,7 @@ import { format } from "date-fns";
 import { NavLink } from "react-router-dom";
 import { IconCross } from "@humansignal/icons";
 import { Button, Userpic, useToast } from "@humansignal/ui";
+import { useAuth } from "@humansignal/core/providers/AuthProvider";
 import { cn } from "../../../utils/bem";
 import { useAPI } from "../../../providers/ApiProvider";
 import "./SelectedUser.scss";
@@ -36,6 +37,7 @@ const UserProjectsLinks = ({ projects }) => {
 export const SelectedUser = ({ user, organizationId, onClose, onRoleChange }) => {
   const api = useAPI();
   const toast = useToast();
+  const { user: currentUser } = useAuth();
   const [role, setRole] = useState(user.role);
   const [saving, setSaving] = useState(false);
   const fullName = [user.first_name, user.last_name]
@@ -43,32 +45,42 @@ export const SelectedUser = ({ user, organizationId, onClose, onRoleChange }) =>
     .join(" ")
     .trim();
 
-  const canEditRole = !user.is_owner;
+  const currentRole = currentUser?.current_role?.code;
+  const canManageRoles = ["OW", "AD", "MA"].includes(currentRole);
+  const canEditRole = canManageRoles && !user.is_owner;
   const selectedRoleLabel = useMemo(() => ROLE_OPTIONS.find((item) => item.value === role)?.label ?? user.role_name, [role, user.role_name]);
 
   const saveRole = async () => {
     setSaving(true);
-
-    const response = await api.callApi("updateUserMembership", {
-      params: {
-        pk: organizationId,
-        userPk: user.id,
-      },
-      data: {
-        role,
-      },
-    });
-
-    setSaving(false);
-
-    if (response?.role) {
-      toast.show({ message: "Member role updated" });
-      onRoleChange?.({
-        ...user,
-        role: response.role,
-        role_name: response.role_name,
-        is_owner: response.is_owner,
+    try {
+      const response = await api.callApi("updateUserMembership", {
+        params: {
+          pk: organizationId,
+          userPk: user.id,
+        },
+        data: {
+          role,
+        },
       });
+
+      if (response?.role) {
+        toast.show({ message: "Member role updated" });
+        onRoleChange?.({
+          ...user,
+          role: response.role,
+          role_name: response.role_name,
+          is_owner: response.is_owner,
+        });
+      }
+    } catch (error) {
+      const message = error?.response?.data?.detail;
+
+      toast.show({
+        message: message || "Failed to update member role",
+        type: "error",
+      });
+    } finally {
+      setSaving(false);
     }
   };
 

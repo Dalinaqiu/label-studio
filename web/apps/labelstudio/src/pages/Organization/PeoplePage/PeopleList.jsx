@@ -46,7 +46,7 @@ export const PeopleList = ({ organizationId, onSelect, selectedUser, defaultSele
     [api, organizationId],
   );
 
-  const selectUser = useCallback(
+  const handleUserClick = useCallback(
     (user) => {
       if (selectedUser?.id === user.id) {
         onSelect?.(null);
@@ -65,9 +65,11 @@ export const PeopleList = ({ organizationId, onSelect, selectedUser, defaultSele
     if (isDefined(defaultSelected) && usersList) {
       const selected = usersList.find(({ user }) => user.id === Number(defaultSelected));
 
-      if (selected) selectUser(selected.user);
+      if (selected && selectedUser?.id !== selected.user.id) {
+        onSelect?.(selected.user);
+      }
     }
-  }, [usersList, defaultSelected, selectUser]);
+  }, [usersList, defaultSelected, selectedUser?.id, onSelect]);
 
   return (
     <div className={cn("people-list").toClassName()}>
@@ -89,7 +91,7 @@ export const PeopleList = ({ organizationId, onSelect, selectedUser, defaultSele
                   <div
                     key={`user-${user.id}`}
                     className={cn("people-list").elem("user").mod({ active }).toClassName()}
-                    onClick={() => selectUser(user)}
+                    onClick={() => handleUserClick(user)}
                   >
                     <div className={cn("people-list").elem("field").mix("avatar").toClassName()}>
                       <CopyableTooltip title={`User ID: ${user.id}`} textForCopy={user.id}>
