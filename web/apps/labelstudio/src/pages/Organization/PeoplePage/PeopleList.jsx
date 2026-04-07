@@ -62,14 +62,14 @@ export const PeopleList = ({ organizationId, onSelect, selectedUser, defaultSele
   }, [fetchUsers, currentPage, currentPageSize, refreshKey]);
 
   useEffect(() => {
-    if (isDefined(defaultSelected) && usersList) {
+    if (isDefined(defaultSelected) && usersList && !selectedUser) {
       const selected = usersList.find(({ user }) => user.id === Number(defaultSelected));
 
-      if (selected && selectedUser?.id !== selected.user.id) {
+      if (selected) {
         onSelect?.(selected.user);
       }
     }
-  }, [usersList, defaultSelected, selectedUser?.id, onSelect]);
+  }, [usersList, defaultSelected, selectedUser, onSelect]);
 
   return (
     <div className={cn("people-list").toClassName()}>

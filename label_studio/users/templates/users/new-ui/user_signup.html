@@ -43,7 +43,7 @@
           </ul>
         {% endif %}
       </div>
-      <div class="input-wrapper">
+      <!-- <div class="input-wrapper">
         <label>你是如何了解到 Label Studio 的？</label>
         <select class="lsf-select-ls" name="how_find_us" id="how_find_us">
           <option disabled value="" {% if not form.data.how_find_us %}selected{% endif %}>请选择</option>
@@ -51,7 +51,7 @@
             <option value="{{ choice.1 }}" {% if choice.1 == user_form.data.how_find_us %}selected{% endif %}>{{ choice.1 }}</option>
           {% endfor %}
         </select>
-      </div>
+      </div> -->
       <div class="input-wrapper" id="elaborateContainer" {% if user_form.data.how_find_us != elaborate %}style="display:none;"{% endif %}> 
         <label>请说明</label>
         <input class="lsf-input-ls" name="elaborate" id="elaborate" {% if user_form.data.how_find_us == elaborate %}value="{{ user_form.data.elaborate }}"{% endif %}>

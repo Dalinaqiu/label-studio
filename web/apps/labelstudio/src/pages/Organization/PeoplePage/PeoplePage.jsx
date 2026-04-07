@@ -18,6 +18,7 @@ export const PeoplePage = () => {
   const apiSettingsModal = useRef();
   const toast = useToast();
   const [selectedUser, setSelectedUser] = useState(null);
+  const [defaultSelected, setDefaultSelected] = useState(() => localStorage.getItem("selectedUser"));
   const [invitationOpen, setInvitationOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const organizationId = useMemo(() => APP_SETTINGS.user?.active_organization ?? 1, []);
@@ -26,7 +27,10 @@ export const PeoplePage = () => {
 
   const selectUser = useCallback((user) => {
     setSelectedUser(user);
-    localStorage.setItem("selectedUser", user?.id ?? "");
+    const nextSelected = user?.id ? String(user.id) : "";
+
+    setDefaultSelected(nextSelected);
+    localStorage.setItem("selectedUser", nextSelected);
   }, []);
 
   const apiTokensSettingsModalProps = useMemo(
@@ -49,10 +53,6 @@ export const PeoplePage = () => {
     apiSettingsModal.current = modal(apiTokensSettingsModalProps);
     __lsa("organization.token_settings");
   }, [apiTokensSettingsModalProps]);
-
-  const defaultSelected = useMemo(() => {
-    return localStorage.getItem("selectedUser");
-  }, []);
 
   return (
     <div className={cn("people").toClassName()}>

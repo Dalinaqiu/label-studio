@@ -123,6 +123,12 @@ pip install label-studio
 # Install all package dependencies
 pip install poetry
 poetry install
+
+# 加载环境变量
+set -a
+source .env
+set +a
+
 # Run database migrations
 python label_studio/manage.py migrate
 python label_studio/manage.py collectstatic

@@ -37,7 +37,7 @@ const UserProjectsLinks = ({ projects }) => {
 export const SelectedUser = ({ user, organizationId, onClose, onRoleChange }) => {
   const api = useAPI();
   const toast = useToast();
-  const { user: currentUser } = useAuth();
+  const { permissions } = useAuth();
   const [role, setRole] = useState(user.role);
   const [saving, setSaving] = useState(false);
   const fullName = [user.first_name, user.last_name]
@@ -45,8 +45,7 @@ export const SelectedUser = ({ user, organizationId, onClose, onRoleChange }) =>
     .join(" ")
     .trim();
 
-  const currentRole = currentUser?.current_role?.code;
-  const canManageRoles = ["OW", "AD", "MA"].includes(currentRole);
+  const canManageRoles = permissions.can("organizations.change");
   const canEditRole = canManageRoles && !user.is_owner;
   const selectedRoleLabel = useMemo(() => ROLE_OPTIONS.find((item) => item.value === role)?.label ?? user.role_name, [role, user.role_name]);
 
@@ -58,7 +57,7 @@ export const SelectedUser = ({ user, organizationId, onClose, onRoleChange }) =>
           pk: organizationId,
           userPk: user.id,
         },
-        data: {
+        body: {
           role,
         },
       });
