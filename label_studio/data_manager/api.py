@@ -331,7 +331,48 @@ class TaskListAPI(generics.ListCreateAPIView):
         }
 
     def get_task_queryset(self, request, prepare_params):
-        return Task.prepared.only_filtered(prepare_params=prepare_params)
+        queryset = Task.prepared.only_filtered(prepare_params=prepare_params)
+        return self.apply_workflow_scope_filter(queryset, request)
+
+    def apply_workflow_scope_filter(self, queryset, request):
+        workflow_scope = request.GET.get('workflow_scope')
+
+        if not workflow_scope:
+            return queryset
+
+        user = request.user
+
+        if workflow_scope == 'my_annotation':
+            return queryset.filter(
+                current_annotator_id=user.id,
+                workflow_status__in=[
+                    Task.WorkflowStatus.PENDING_ANNOTATION,
+                    Task.WorkflowStatus.ANNOTATING,
+                    Task.WorkflowStatus.REVIEW_REJECTED,
+                    Task.WorkflowStatus.FINAL_REJECTED,
+                    Task.WorkflowStatus.REOPENED,
+                ],
+            )
+
+        if workflow_scope == 'my_review':
+            return queryset.filter(
+                current_reviewer_id=user.id,
+                workflow_status__in=[
+                    Task.WorkflowStatus.PENDING_REVIEW,
+                    Task.WorkflowStatus.REVIEWING,
+                ],
+            )
+
+        if workflow_scope == 'my_final_review':
+            return queryset.filter(
+                current_final_reviewer_id=user.id,
+                workflow_status__in=[
+                    Task.WorkflowStatus.PENDING_FINAL_REVIEW,
+                    Task.WorkflowStatus.FINAL_REVIEWING,
+                ],
+            )
+
+        return queryset
 
     @staticmethod
     def prefetch(queryset):

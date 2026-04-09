@@ -51,6 +51,19 @@ TaskMixin = load_func(settings.TASK_MIXIN)
 class Task(TaskMixin, FsmHistoryStateModel):
     """Business tasks from project"""
 
+    class WorkflowStatus(models.TextChoices):
+        UNASSIGNED = 'UNASSIGNED', _('Unassigned')
+        PENDING_ANNOTATION = 'PENDING_ANNOTATION', _('Pending annotation')
+        ANNOTATING = 'ANNOTATING', _('Annotating')
+        PENDING_REVIEW = 'PENDING_REVIEW', _('Pending review')
+        REVIEWING = 'REVIEWING', _('Reviewing')
+        REVIEW_REJECTED = 'REVIEW_REJECTED', _('Review rejected')
+        PENDING_FINAL_REVIEW = 'PENDING_FINAL_REVIEW', _('Pending final review')
+        FINAL_REVIEWING = 'FINAL_REVIEWING', _('Final reviewing')
+        FINAL_REJECTED = 'FINAL_REJECTED', _('Final rejected')
+        COMPLETED = 'COMPLETED', _('Completed')
+        REOPENED = 'REOPENED', _('Reopened')
+
     id = models.AutoField(
         auto_created=True,
         primary_key=True,
@@ -174,6 +187,75 @@ class Task(TaskMixin, FsmHistoryStateModel):
         db_index=True,
         help_text='When the last comment was updated',
     )
+    workflow_status = models.CharField(
+        _('workflow status'),
+        max_length=32,
+        choices=WorkflowStatus.choices,
+        default=WorkflowStatus.UNASSIGNED,
+        db_index=True,
+        help_text='Business workflow status for annotation-review-final review process',
+    )
+    current_annotator = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name='workflow_annotator_tasks',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        help_text='Currently assigned annotator',
+    )
+    current_reviewer = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name='workflow_reviewer_tasks',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        help_text='Currently assigned reviewer',
+    )
+    current_final_reviewer = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name='workflow_final_reviewer_tasks',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        help_text='Currently assigned admin/final reviewer',
+    )
+    current_annotation = models.ForeignKey(
+        'tasks.Annotation',
+        related_name='current_for_tasks',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        help_text='Current active annotation version for workflow',
+    )
+    annotation_submitted_at = models.DateTimeField(_('annotation submitted at'), null=True, blank=True)
+    review_submitted_at = models.DateTimeField(_('review submitted at'), null=True, blank=True)
+    final_reviewed_at = models.DateTimeField(_('final reviewed at'), null=True, blank=True)
+    workflow_completed_at = models.DateTimeField(_('workflow completed at'), null=True, blank=True)
+    review_round = models.IntegerField(
+        _('review round'),
+        default=0,
+        db_default=0,
+        help_text='Incremented when task re-enters the review loop',
+    )
+    reject_count = models.IntegerField(
+        _('reject count'),
+        default=0,
+        db_default=0,
+        help_text='Number of times the task was rejected or returned',
+    )
+    reopen_count = models.IntegerField(
+        _('reopen count'),
+        default=0,
+        db_default=0,
+        help_text='Number of times the completed task was reopened',
+    )
+    is_workflow_locked = models.BooleanField(
+        _('workflow locked'),
+        default=False,
+        db_default=False,
+        help_text='Business lock after final completion',
+    )
+    assigned_at = models.DateTimeField(_('assigned at'), null=True, blank=True)
 
     objects = TaskManager()  # task manager by default
     prepared = PreparedTaskManager()  # task manager with filters, ordering, etc for data_manager app
@@ -187,6 +269,11 @@ class Task(TaskMixin, FsmHistoryStateModel):
             models.Index(fields=['id', 'overlap']),
             models.Index(fields=['overlap']),
             models.Index(fields=['project', 'id']),
+            models.Index(fields=['workflow_status']),
+            models.Index(fields=['current_annotator', 'workflow_status']),
+            models.Index(fields=['current_reviewer', 'workflow_status']),
+            models.Index(fields=['current_final_reviewer', 'workflow_status']),
+            models.Index(fields=['current_annotation']),
         ]
 
     @property
@@ -614,6 +701,16 @@ AnnotationMixin = load_func(settings.ANNOTATION_MIXIN)
 class Annotation(AnnotationMixin, FsmHistoryStateModel):
     """Annotations & Labeling results"""
 
+    class WorkflowNode(models.TextChoices):
+        ANNOTATION = 'ANNOTATION', _('Annotation')
+        REVIEW = 'REVIEW', _('Review')
+        FINAL = 'FINAL', _('Final')
+
+    class Decision(models.TextChoices):
+        PENDING = 'PENDING', _('Pending')
+        ACCEPTED = 'ACCEPTED', _('Accepted')
+        REJECTED = 'REJECTED', _('Rejected')
+
     objects = AnnotationManager()
 
     result = JSONField(
@@ -723,6 +820,48 @@ class Annotation(AnnotationMixin, FsmHistoryStateModel):
         null=True,
         help_text='Annotation was created in bulk mode',
     )
+    workflow_node = models.CharField(
+        _('workflow node'),
+        max_length=32,
+        choices=WorkflowNode.choices,
+        default=WorkflowNode.ANNOTATION,
+        help_text='Workflow node that produced this annotation version',
+    )
+    annotation_role = models.CharField(
+        _('annotation role'),
+        max_length=2,
+        null=True,
+        blank=True,
+        help_text='Role of the actor who produced this annotation version',
+    )
+    source_annotation = models.ForeignKey(
+        'self',
+        on_delete=models.SET_NULL,
+        related_name='derived_annotations',
+        null=True,
+        blank=True,
+        help_text='Source annotation version from which this one derives',
+    )
+    review_decision = models.CharField(
+        _('review decision'),
+        max_length=32,
+        choices=Decision.choices,
+        default=Decision.PENDING,
+        help_text='Reviewer decision for this annotation version',
+    )
+    final_decision = models.CharField(
+        _('final decision'),
+        max_length=32,
+        choices=Decision.choices,
+        default=Decision.PENDING,
+        help_text='Final reviewer decision for this annotation version',
+    )
+    is_current_version = models.BooleanField(
+        _('is current version'),
+        default=True,
+        db_default=True,
+        help_text='Marks the latest active annotation version for the task workflow',
+    )
 
     class Meta:
         db_table = 'task_completion'
@@ -735,8 +874,10 @@ class Annotation(AnnotationMixin, FsmHistoryStateModel):
             models.Index(fields=['project', 'id']),
             models.Index(fields=['project', 'was_cancelled']),
             models.Index(fields=['task', 'completed_by']),
+            models.Index(fields=['task', 'is_current_version']),
             models.Index(fields=['task', 'ground_truth']),
             models.Index(fields=['task', 'was_cancelled']),
+            models.Index(fields=['workflow_node']),
             models.Index(fields=['was_cancelled']),
         ]
 
@@ -844,6 +985,154 @@ class TaskLockQuerySet(models.QuerySet):
     """Custom QuerySet for TaskLock model"""
 
     pass
+
+
+class TaskAssignment(models.Model):
+    class AssignmentType(models.TextChoices):
+        ANNOTATOR = 'ANNOTATOR', _('Annotator')
+        REVIEWER = 'REVIEWER', _('Reviewer')
+        FINAL_REVIEWER = 'FINAL_REVIEWER', _('Final reviewer')
+
+    task = models.ForeignKey('tasks.Task', on_delete=models.CASCADE, related_name='workflow_assignments')
+    assignment_type = models.CharField(max_length=32, choices=AssignmentType.choices)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='task_assignments',
+    )
+    assigned_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='assigned_task_assignments',
+    )
+    is_active = models.BooleanField(default=True, db_default=True)
+    reason = models.CharField(max_length=255, null=True, blank=True)
+    assigned_at = models.DateTimeField(auto_now_add=True)
+    unassigned_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'task_assignment'
+        indexes = [
+            models.Index(fields=['task', 'assignment_type', 'is_active']),
+            models.Index(fields=['user', 'assignment_type', 'is_active']),
+            models.Index(fields=['assigned_by']),
+        ]
+
+
+class TaskReview(models.Model):
+    class ReviewType(models.TextChoices):
+        REVIEW = 'REVIEW', _('Review')
+        FINAL_REVIEW = 'FINAL_REVIEW', _('Final review')
+
+    class Decision(models.TextChoices):
+        APPROVED = 'APPROVED', _('Approved')
+        REJECTED = 'REJECTED', _('Rejected')
+        FIXED_AND_APPROVED = 'FIXED_AND_APPROVED', _('Fixed and approved')
+        RETURNED = 'RETURNED', _('Returned')
+        REOPENED = 'REOPENED', _('Reopened')
+
+    task = models.ForeignKey('tasks.Task', on_delete=models.CASCADE, related_name='reviews')
+    annotation = models.ForeignKey('tasks.Annotation', on_delete=models.CASCADE, related_name='reviews')
+    reviewed_annotation = models.ForeignKey(
+        'tasks.Annotation',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='review_outputs',
+    )
+    review_type = models.CharField(max_length=32, choices=ReviewType.choices)
+    decision = models.CharField(max_length=32, choices=Decision.choices)
+    reviewer = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='task_reviews',
+    )
+    review_round = models.IntegerField(default=0, db_default=0)
+    comment = models.TextField(null=True, blank=True)
+    extra = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'task_review'
+        indexes = [
+            models.Index(fields=['task', 'review_type', 'review_round']),
+            models.Index(fields=['reviewer', 'review_type']),
+            models.Index(fields=['annotation']),
+            models.Index(fields=['reviewed_annotation']),
+        ]
+
+
+class TaskReviewRejectLog(models.Model):
+    class Stage(models.TextChoices):
+        ANNOTATION = 'ANNOTATION', _('Annotation')
+        REVIEW = 'REVIEW', _('Review')
+        FINAL = 'FINAL', _('Final')
+
+    task = models.ForeignKey('tasks.Task', on_delete=models.CASCADE, related_name='review_reject_logs')
+    task_review = models.ForeignKey(
+        'tasks.TaskReview',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='reject_logs',
+    )
+    from_stage = models.CharField(max_length=32, choices=Stage.choices)
+    to_stage = models.CharField(max_length=32, choices=Stage.choices)
+    operator = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='task_review_reject_logs',
+    )
+    reason = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'task_review_reject_log'
+        indexes = [
+            models.Index(fields=['task']),
+            models.Index(fields=['task_review']),
+            models.Index(fields=['operator']),
+        ]
+
+
+class TaskWorkflowLog(models.Model):
+    task = models.ForeignKey('tasks.Task', on_delete=models.CASCADE, related_name='workflow_logs')
+    from_status = models.CharField(max_length=32, null=True, blank=True)
+    to_status = models.CharField(max_length=32)
+    action_type = models.CharField(max_length=64)
+    operator = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='task_workflow_logs',
+    )
+    operator_role = models.CharField(max_length=2, null=True, blank=True)
+    annotation = models.ForeignKey(
+        'tasks.Annotation',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='workflow_logs',
+    )
+    task_review = models.ForeignKey(
+        'tasks.TaskReview',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='workflow_logs',
+    )
+    payload = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'task_workflow_log'
+        indexes = [
+            models.Index(fields=['task', 'created_at']),
+            models.Index(fields=['operator', 'created_at']),
+            models.Index(fields=['task_review']),
+        ]
 
 
 class TaskLockQuerySetWithFSM(FSMStateQuerySetMixin, TaskLockQuerySet):

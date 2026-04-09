@@ -269,6 +269,42 @@ def get_all_columns(project, *_):
             'visibility_defaults': {'explore': False, 'labeling': False},
             'project_defined': False,
         },
+        {
+            'id': 'workflow_status',
+            'title': 'Workflow',
+            'type': 'TaskState',
+            'help': 'Current workflow stage for the task',
+            'target': 'tasks',
+            'visibility_defaults': {'explore': True, 'labeling': True},
+            'project_defined': False,
+        },
+        {
+            'id': 'review_round',
+            'title': 'Review Round',
+            'type': 'Number',
+            'help': 'Current review round for the task',
+            'target': 'tasks',
+            'visibility_defaults': {'explore': False, 'labeling': False},
+            'project_defined': False,
+        },
+        {
+            'id': 'reject_count',
+            'title': 'Reject Count',
+            'type': 'Number',
+            'help': 'Number of times the task was rejected',
+            'target': 'tasks',
+            'visibility_defaults': {'explore': False, 'labeling': False},
+            'project_defined': False,
+        },
+        {
+            'id': 'reopen_count',
+            'title': 'Reopen Count',
+            'type': 'Number',
+            'help': 'Number of times the task was reopened',
+            'target': 'tasks',
+            'visibility_defaults': {'explore': False, 'labeling': False},
+            'project_defined': False,
+        },
     ]
 
     result['columns'].append(data_root)

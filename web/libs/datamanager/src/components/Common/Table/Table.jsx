@@ -17,6 +17,7 @@ import { cn } from "../../../utils/bem";
 import { FieldsButton } from "../FieldsButton";
 import { FF_LOPS_E_3, isFF } from "../../../utils/feature-flags";
 import { DensityToggle } from "../../DataManager/Toolbar/DensityToggle";
+import { WorkflowScopeToggle } from "../../DataManager/Toolbar/WorkflowScopeToggle";
 
 const Decorator = (decoration) => {
   return {
@@ -188,6 +189,7 @@ export const Table = observer(
             tooltip={"Customize Columns"}
             data-testid="columns-picker-quickview"
           />
+          <WorkflowScopeToggle size="small" data-testid="workflow-scope-quickview" />
           <DensityToggle size="small" onChange={onDensityChange} data-testid="density-toggle-quickview" />
         </div>
       );

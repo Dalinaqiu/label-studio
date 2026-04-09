@@ -30,6 +30,13 @@ const TaskStore = types
      * Whether this task can be skipped. Defaults to true if undefined.
      */
     allow_skip: types.optional(types.maybeNull(types.boolean), true),
+    workflow_status: types.optional(types.maybeNull(types.string), null),
+    review_round: types.optional(types.maybeNull(types.number), 0),
+    reject_count: types.optional(types.maybeNull(types.number), 0),
+    reopen_count: types.optional(types.maybeNull(types.number), 0),
+    current_annotator: types.maybeNull(types.number),
+    current_reviewer: types.maybeNull(types.number),
+    current_final_reviewer: types.maybeNull(types.number),
   })
   .views((self) => ({
     get app() {

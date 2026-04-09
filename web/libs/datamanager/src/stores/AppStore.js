@@ -137,6 +137,7 @@ export const AppStore = types
     needsDataFetch: false,
     projectFetch: false,
     requestsInFlight: new Map(),
+    selectionSyncTimer: null,
   }))
   .actions((self) => ({
     startPolling() {
@@ -158,6 +159,7 @@ export const AppStore = types
 
     beforeDestroy() {
       clearTimeout(self._poll);
+      clearTimeout(self.selectionSyncTimer);
       window.removeEventListener("popstate", self.handlePopState);
       networkActivity.destroy();
     },
@@ -304,6 +306,35 @@ export const AppStore = types
     unsetSelection() {
       self.annotationStore.unset({ withHightlight: true });
       self.taskStore.unset({ withHightlight: true });
+    },
+
+    syncLabelingSelectionWithDataStore() {
+      if (!self.isLabeling || self.target !== "tasks") return;
+
+      const list = self.taskStore.list ?? [];
+      const selectedTaskId = self.taskStore.selected?.id;
+
+      if (selectedTaskId && list.some((task) => task.id === selectedTaskId)) {
+        return;
+      }
+
+      clearTimeout(self.selectionSyncTimer);
+      self.selectionSyncTimer = window.setTimeout(() => {
+        if (!self.isLabeling || self.target !== "tasks") return;
+
+        const nextList = self.taskStore.list ?? [];
+        const nextSelectedTaskId = self.taskStore.selected?.id;
+
+        if (nextSelectedTaskId && nextList.some((task) => task.id === nextSelectedTaskId)) {
+          return;
+        }
+
+        if (nextList.length > 0) {
+          self.startLabeling(nextList[0]);
+        } else {
+          self.closeLabeling();
+        }
+      }, 0);
     },
 
     createDataStores() {

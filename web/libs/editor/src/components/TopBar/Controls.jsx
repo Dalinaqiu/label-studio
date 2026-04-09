@@ -12,6 +12,7 @@ import "./Controls.scss";
 import { useCallback, useMemo, useState } from "react";
 
 const TOOLTIP_DELAY = 0.8;
+const WORKFLOW_REJECTED_STATUSES = ["REVIEW_REJECTED", "FINAL_REJECTED"];
 
 const ButtonTooltip = inject("store")(
   observer(({ store, title, children }) => {
@@ -33,6 +34,9 @@ const controlsInjector = inject(({ store }) => {
 export const Controls = controlsInjector(
   observer(({ store, history, annotation }) => {
     const isReview = store.hasInterface("review");
+    const workflowStatus = store.task?.workflow_status;
+    const isFinalReview = ["PENDING_FINAL_REVIEW", "FINAL_REVIEWING"].includes(workflowStatus);
+    const isWorkflowRejectedAnnotationStage = !isReview && WORKFLOW_REJECTED_STATUSES.includes(workflowStatus ?? "");
 
     const historySelected = isDefined(store.annotationStore.selectedHistory);
     const { userGenerate, sentUserGenerate, versions, results, editable } = annotation;
@@ -79,8 +83,11 @@ export const Controls = controlsInjector(
     );
 
     const RejectButton = useMemo(() => {
+      const rejectLabel = isFinalReview ? "退回审核" : "退回标注";
+      const rejectTooltip = isFinalReview ? "退回审核：[ Ctrl+Space ]" : "退回标注：[ Ctrl+Space ]";
+
       return (
-        <ButtonTooltip key="reject" title="拒绝标注：[ Ctrl+Space ]">
+        <ButtonTooltip key="reject" title={rejectTooltip}>
           <Button
             aria-label="拒绝当前标注"
             disabled={disabled}
@@ -95,17 +102,26 @@ export const Controls = controlsInjector(
               }
             }}
           >
-            拒绝
+            {rejectLabel}
           </Button>
         </ButtonTooltip>
       );
-    }, [disabled, store]);
+    }, [disabled, store, isFinalReview]);
 
     if (isReview) {
       buttons.push(RejectButton);
 
+      const acceptLabel = isFinalReview
+        ? history.canUndo || annotation.versions.draft
+          ? "修正并终审通过"
+          : "终审通过"
+        : history.canUndo || annotation.versions.draft
+          ? "修正并通过"
+          : "审核通过";
+      const acceptTooltip = isFinalReview ? "终审通过：[ Ctrl+Enter ]" : "审核通过：[ Ctrl+Enter ]";
+
       buttons.push(
-        <ButtonTooltip key="accept" title="接受标注：[ Ctrl+Enter ]">
+        <ButtonTooltip key="accept" title={acceptTooltip}>
           <Button
             aria-label="接受当前标注"
             disabled={disabled}
@@ -115,7 +131,7 @@ export const Controls = controlsInjector(
               store.acceptAnnotation();
             }}
           >
-            {history.canUndo || annotation.versions.draft ? "修正并接受" : "接受"}
+            {acceptLabel}
           </Button>
         </ButtonTooltip>,
       );
@@ -144,7 +160,7 @@ export const Controls = controlsInjector(
       // Manager roles that can force-skip unskippable tasks (OW=Owner, AD=Admin, MA=Manager)
       const MANAGER_ROLES = ["OW", "AD", "MA"];
 
-      if (store.hasInterface("skip")) {
+      if (store.hasInterface("skip") && !isWorkflowRejectedAnnotationStage) {
         const task = store.task;
 
         const isEnterprise = window.APP_SETTINGS?.billing?.enterprise;
@@ -190,7 +206,11 @@ export const Controls = controlsInjector(
       }
 
       if ((userGenerate && !sentUserGenerate) || (store.explore && !userGenerate && store.hasInterface("submit"))) {
-        const title = submitDisabled ? "此项目不允许空标注" : "保存结果：[ Ctrl+Enter ]";
+        const title = submitDisabled
+          ? "此项目不允许空标注"
+          : isWorkflowRejectedAnnotationStage
+            ? "修改后重新提交审核：[ Ctrl+Enter ]"
+            : "保存结果：[ Ctrl+Enter ]";
         // span is to display tooltip for disabled button
 
         buttons.push(
@@ -200,22 +220,25 @@ export const Controls = controlsInjector(
                 aria-label="提交当前标注"
                 disabled={disabled || submitDisabled}
                 look="primary"
-                onClick={async () => {
-                  await store.commentStore.commentFormSubmit();
-                  store.submitAnnotation();
-                }}
-              >
-                提交
-              </Button>
-            </div>
-          </ButtonTooltip>,
-        );
+              onClick={async () => {
+                await store.commentStore.commentFormSubmit();
+                store.submitAnnotation();
+              }}
+            >
+              {isWorkflowRejectedAnnotationStage ? "重新提交审核" : "提交"}
+            </Button>
+          </div>
+        </ButtonTooltip>,
+      );
       }
 
       if ((userGenerate && sentUserGenerate) || (!userGenerate && store.hasInterface("update"))) {
         const isUpdate = sentUserGenerate || versions.result;
         const button = (
-          <ButtonTooltip key="update" title="更新此任务：[ Alt+Enter ]">
+          <ButtonTooltip
+            key="update"
+            title={isWorkflowRejectedAnnotationStage ? "修改后重新提交审核：[ Alt+Enter ]" : "更新此任务：[ Alt+Enter ]"}
+          >
             <Button
               aria-label="更新当前标注"
               disabled={disabled || submitDisabled}
@@ -225,7 +248,7 @@ export const Controls = controlsInjector(
                 store.updateAnnotation();
               }}
             >
-              {isUpdate ? "更新" : "提交"}
+              {isWorkflowRejectedAnnotationStage ? "重新提交审核" : isUpdate ? "更新" : "提交"}
             </Button>
           </ButtonTooltip>
         );

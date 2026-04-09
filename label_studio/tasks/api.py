@@ -11,7 +11,7 @@ from data_manager.api import TaskListAPI as DMTaskListAPI
 from data_manager.functions import evaluate_predictions
 from data_manager.models import PrepareParams
 from data_manager.serializers import DataManagerTaskSerializer
-from django.db import transaction
+from django.db import models, transaction
 from django.db.models import Q
 from django.utils import timezone
 from django.utils.decorators import method_decorator
@@ -24,7 +24,7 @@ from rest_framework import generics, viewsets
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.response import Response
-from tasks.models import Annotation, AnnotationDraft, Prediction, Task
+from tasks.models import Annotation, AnnotationDraft, Prediction, Task, TaskReview
 from tasks.openapi_schema import (
     annotation_request_schema,
     annotation_response_example,
@@ -38,7 +38,11 @@ from tasks.serializers import (
     AnnotationDraftSerializer,
     AnnotationSerializer,
     PredictionSerializer,
+    TaskAssignmentSerializer,
+    TaskReopenSerializer,
+    TaskReviewDecisionSerializer,
     TaskSerializer,
+    TaskSubmitReviewSerializer,
     TaskSimpleSerializer,
 )
 from webhooks.models import WebhookAction
@@ -49,6 +53,80 @@ from webhooks.utils import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _can_manage_workflow_task(user, task):
+    return (
+        getattr(user, 'is_superuser', False)
+        or user.has_manageable_organization_role()
+        or user.has_project_role(task.project, 'OW', 'AD', 'MA')
+    )
+
+
+def _can_create_annotation(user, task):
+    if _can_manage_workflow_task(user, task):
+        return True
+    if not task.project.workflow_enabled:
+        return task.project.has_permission(user)
+    return (
+        task.current_annotator_id == user.id
+        and task.workflow_status
+        in {
+            Task.WorkflowStatus.PENDING_ANNOTATION,
+            Task.WorkflowStatus.ANNOTATING,
+            Task.WorkflowStatus.REVIEW_REJECTED,
+            Task.WorkflowStatus.REOPENED,
+            Task.WorkflowStatus.UNASSIGNED,
+        }
+    )
+
+
+def _can_edit_annotation(user, annotation):
+    task = annotation.task
+    if _can_manage_workflow_task(user, task):
+        return True
+    if not task.project.workflow_enabled:
+        return annotation.completed_by_id == user.id or annotation.updated_by_id == user.id
+
+    if task.current_annotation_id and task.current_annotation_id != annotation.id:
+        return False
+
+    if (
+        task.current_annotator_id == user.id
+        and task.workflow_status
+        in {
+            Task.WorkflowStatus.PENDING_ANNOTATION,
+            Task.WorkflowStatus.ANNOTATING,
+            Task.WorkflowStatus.REVIEW_REJECTED,
+            Task.WorkflowStatus.REOPENED,
+        }
+    ):
+        return True
+
+    if (
+        task.current_reviewer_id == user.id
+        and task.project.reviewer_can_edit
+        and task.workflow_status in {Task.WorkflowStatus.PENDING_REVIEW, Task.WorkflowStatus.REVIEWING}
+    ):
+        return True
+
+    if (
+        task.current_final_reviewer_id == user.id
+        and task.project.admin_can_edit
+        and task.workflow_status in {Task.WorkflowStatus.PENDING_FINAL_REVIEW, Task.WorkflowStatus.FINAL_REVIEWING}
+    ):
+        return True
+
+    return False
+
+
+def _can_access_draft(user, draft):
+    task = draft.task
+    if _can_manage_workflow_task(user, task):
+        return True
+    if not task.project.workflow_enabled:
+        return draft.user_id == user.id
+    return task.current_annotator_id == user.id and draft.user_id == user.id
 
 
 # TODO: fix after switch to api/tasks from api/dm/tasks
@@ -454,12 +532,17 @@ class AnnotationAPI(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = AnnotationSerializer
     queryset = Annotation.objects.all()
 
+    def get_queryset(self):
+        return Annotation.objects.filter(task__in=Task.objects.for_user(self.request.user))
+
     def perform_destroy(self, annotation):
         annotation.delete()
 
     def update(self, request, *args, **kwargs):
-        # save user history with annotator_id, time & annotation result
         annotation = self.get_object()
+        if not _can_edit_annotation(request.user, annotation):
+            raise PermissionDenied('You do not have permission to edit this annotation')
+
         # use updated instead of save to avoid duplicated signals
         Annotation.objects.filter(id=annotation.id).update(updated_by=request.user)
 
@@ -489,6 +572,9 @@ class AnnotationAPI(generics.RetrieveUpdateDestroyAPIView):
 
     @api_webhook_for_delete(WebhookAction.ANNOTATIONS_DELETED)
     def delete(self, request, *args, **kwargs):
+        annotation = self.get_object()
+        if not _can_edit_annotation(request.user, annotation):
+            raise PermissionDenied('You do not have permission to delete this annotation')
         return super(AnnotationAPI, self).delete(request, *args, **kwargs)
 
 
@@ -595,8 +681,9 @@ class AnnotationsListAPI(GetParentObjectMixin, generics.ListCreateAPIView):
 
     def perform_create(self, ser):
         task = self.parent_object
-        # annotator has write access only to annotations and it can't be checked it after serializer.save()
         user = self.request.user
+        if not _can_create_annotation(user, task):
+            raise PermissionDenied('You do not have permission to create an annotation for this task')
 
         # Check if task is being skipped and if it's allowed
         was_cancelled_get = bool_from_request(self.request.GET, 'was_cancelled', False)
@@ -644,6 +731,16 @@ class AnnotationsListAPI(GetParentObjectMixin, generics.ListCreateAPIView):
         logger.debug(f'User={self.request.user}: save annotation')
         annotation = ser.save(**extra_args)
 
+        if task.project.workflow_enabled and task.workflow_status in {
+            Task.WorkflowStatus.PENDING_ANNOTATION,
+            Task.WorkflowStatus.REOPENED,
+            Task.WorkflowStatus.REVIEW_REJECTED,
+        }:
+            task.workflow_status = Task.WorkflowStatus.ANNOTATING
+            task.current_annotation = annotation
+            task.updated_by = user
+            task.save(update_fields=['workflow_status', 'current_annotation', 'updated_by', 'updated_at'], skip_fsm=True)
+
         logger.debug(f'Save activity for user={self.request.user}')
         self.request.user.activity_at = timezone.now()
         self.request.user.save()
@@ -677,13 +774,22 @@ class AnnotationDraftListAPI(generics.ListCreateAPIView):
 
     def filter_queryset(self, queryset):
         task_id = self.kwargs['pk']
-        return queryset.filter(task_id=task_id)
+        queryset = queryset.filter(task_id=task_id, task__in=Task.objects.for_user(self.request.user))
+        if getattr(self.request.user, 'is_superuser', False) or self.request.user.has_manageable_organization_role():
+            return queryset
+        task = Task.objects.for_user(self.request.user).filter(id=task_id).first()
+        if task and task.project.workflow_enabled:
+            return queryset.filter(user=self.request.user)
+        return queryset
 
     def perform_create(self, serializer):
         task_id = self.kwargs['pk']
         annotation_id = self.kwargs.get('annotation_id')
         user = self.request.user
         logger.debug(f'User {user} is going to create draft for task={task_id}, annotation={annotation_id}')
+        task = generics.get_object_or_404(Task.objects.for_user(user), pk=task_id)
+        if not _can_create_annotation(user, task):
+            raise PermissionDenied('You do not have permission to create a draft for this task')
         serializer.save(task_id=self.kwargs['pk'], annotation_id=annotation_id, user=self.request.user)
 
 
@@ -698,6 +804,387 @@ class AnnotationDraftAPI(generics.RetrieveUpdateDestroyAPIView):
         PATCH=all_permissions.annotations_change,
         DELETE=all_permissions.annotations_delete,
     )
+
+    def get_queryset(self):
+        return AnnotationDraft.objects.filter(task__in=Task.objects.for_user(self.request.user))
+
+    def get_object(self):
+        obj = super().get_object()
+        if not _can_access_draft(self.request.user, obj):
+            raise PermissionDenied('You do not have permission to access this draft')
+        return obj
+
+
+@extend_schema(exclude=True)
+class TaskAssignmentAPI(generics.CreateAPIView):
+    permission_required = ViewClassPermission(POST=all_permissions.tasks_change)
+    serializer_class = TaskAssignmentSerializer
+    queryset = Task.objects.all()
+
+    ASSIGNMENT_TO_FIELD = {
+        'ANNOTATOR': 'current_annotator',
+        'REVIEWER': 'current_reviewer',
+        'FINAL_REVIEWER': 'current_final_reviewer',
+    }
+
+    def get_object(self):
+        return generics.get_object_or_404(Task.objects.for_user(self.request.user), pk=self.kwargs['pk'])
+
+    def _can_manage_task(self, task, user):
+        return (
+            getattr(user, 'is_superuser', False)
+            or user.has_manageable_organization_role()
+            or user.has_project_role(
+                task.project,
+                'OW',
+                'AD',
+                'MA',
+            )
+        )
+
+    def create(self, request, *args, **kwargs):
+        task = self.get_object()
+        if not self._can_manage_task(task, request.user):
+            raise PermissionDenied('You do not have permission to assign this task')
+
+        serializer = self.get_serializer(data=request.data, context={'task': task, 'request': request})
+        serializer.is_valid(raise_exception=True)
+
+        assignment_type = serializer.validated_data['assignment_type']
+        assignee = serializer.validated_data['assignee']
+        reason = serializer.validated_data.get('reason')
+
+        with transaction.atomic():
+            previous_status = task.workflow_status
+            task.workflow_assignments.filter(
+                assignment_type=assignment_type,
+                is_active=True,
+            ).update(is_active=False, unassigned_at=timezone.now())
+
+            assignment = task.workflow_assignments.create(
+                assignment_type=assignment_type,
+                user=assignee,
+                assigned_by=request.user,
+                reason=reason,
+            )
+
+            update_fields = ['updated_at']
+            task_field = self.ASSIGNMENT_TO_FIELD[assignment_type]
+            setattr(task, task_field, assignee)
+            update_fields.append(task_field)
+
+            if assignment_type == 'ANNOTATOR':
+                if task.workflow_status in {
+                    Task.WorkflowStatus.UNASSIGNED,
+                    Task.WorkflowStatus.REOPENED,
+                }:
+                    task.workflow_status = Task.WorkflowStatus.PENDING_ANNOTATION
+                    update_fields.append('workflow_status')
+                if not task.assigned_at:
+                    task.assigned_at = timezone.now()
+                    update_fields.append('assigned_at')
+
+            task.updated_by = request.user
+            update_fields.append('updated_by')
+            task.save(update_fields=list(dict.fromkeys(update_fields)), skip_fsm=True)
+
+            task.workflow_logs.create(
+                from_status=previous_status,
+                to_status=task.workflow_status,
+                action_type=f'ASSIGN_{assignment_type}',
+                operator=request.user,
+                operator_role=getattr(request.user.get_active_organization_membership(), 'role', None),
+                payload={
+                    'assignee_id': assignee.id,
+                    'assignment_id': assignment.id,
+                    'reason': reason,
+                },
+            )
+
+        return Response(
+            {
+                'task_id': task.id,
+                'assignment_id': assignment.id,
+                'assignment_type': assignment.assignment_type,
+                'user_id': assignee.id,
+                'workflow_status': task.workflow_status,
+            },
+            status=201,
+        )
+
+
+@extend_schema(exclude=True)
+class TaskSubmitReviewAPI(generics.CreateAPIView):
+    permission_required = ViewClassPermission(POST=all_permissions.annotations_change)
+    serializer_class = TaskSubmitReviewSerializer
+    queryset = Task.objects.all()
+
+    def get_object(self):
+        return generics.get_object_or_404(Task.objects.for_user(self.request.user), pk=self.kwargs['pk'])
+
+    def create(self, request, *args, **kwargs):
+        task = self.get_object()
+        serializer = self.get_serializer(data=request.data, context={'task': task, 'request': request})
+        serializer.is_valid(raise_exception=True)
+        annotation = serializer.validated_data['annotation']
+
+        with transaction.atomic():
+            previous_status = task.workflow_status
+            task.current_annotation = annotation
+            task.annotation_submitted_at = timezone.now()
+            if task.project.enable_review_stage:
+                task.workflow_status = Task.WorkflowStatus.PENDING_REVIEW
+            elif task.project.enable_final_review_stage:
+                task.workflow_status = Task.WorkflowStatus.PENDING_FINAL_REVIEW
+            else:
+                task.workflow_status = Task.WorkflowStatus.COMPLETED
+                task.is_workflow_locked = True
+                task.workflow_completed_at = timezone.now()
+
+            task.updated_by = request.user
+            task.save(
+                update_fields=[
+                    'current_annotation',
+                    'annotation_submitted_at',
+                    'workflow_status',
+                    'is_workflow_locked',
+                    'workflow_completed_at',
+                    'updated_by',
+                    'updated_at',
+                ],
+                skip_fsm=True,
+            )
+            task.workflow_logs.create(
+                from_status=previous_status,
+                to_status=task.workflow_status,
+                action_type='SUBMIT_ANNOTATION',
+                operator=request.user,
+                operator_role=getattr(request.user.get_active_organization_membership(), 'role', None),
+                annotation=annotation,
+                payload={'annotation_id': annotation.id},
+            )
+
+        return Response(
+            {
+                'task_id': task.id,
+                'annotation_id': annotation.id,
+                'workflow_status': task.workflow_status,
+            },
+            status=201,
+        )
+
+
+@extend_schema(exclude=True)
+class TaskReviewDecisionAPI(generics.CreateAPIView):
+    permission_required = ViewClassPermission(POST=all_permissions.annotations_change)
+    serializer_class = TaskReviewDecisionSerializer
+    queryset = Task.objects.all()
+
+    def get_object(self):
+        return generics.get_object_or_404(Task.objects.for_user(self.request.user), pk=self.kwargs['pk'])
+
+    def _can_review_task(self, task, user):
+        if getattr(user, 'is_superuser', False) or user.has_manageable_organization_role():
+            return True
+        return task.current_reviewer_id == user.id or task.current_final_reviewer_id == user.id
+
+    def create(self, request, *args, **kwargs):
+        task = self.get_object()
+        if not self._can_review_task(task, request.user):
+            raise PermissionDenied('You do not have permission to review this task')
+        if not task.current_annotation_id:
+            raise ValidationError('Task has no current annotation to review')
+
+        serializer = self.get_serializer(data=request.data, context={'task': task, 'request': request})
+        serializer.is_valid(raise_exception=True)
+
+        decision = serializer.validated_data['decision']
+        comment = serializer.validated_data.get('comment')
+        reviewed_annotation = serializer.validated_data.get('reviewed_annotation')
+        return_to_stage = serializer.validated_data.get('return_to_stage')
+
+        review_type = (
+            TaskReview.ReviewType.FINAL_REVIEW
+            if task.workflow_status in {Task.WorkflowStatus.PENDING_FINAL_REVIEW, Task.WorkflowStatus.FINAL_REVIEWING}
+            else TaskReview.ReviewType.REVIEW
+        )
+
+        with transaction.atomic():
+            previous_status = task.workflow_status
+            review = TaskReview.objects.create(
+                task=task,
+                annotation=task.current_annotation,
+                reviewed_annotation=reviewed_annotation,
+                review_type=review_type,
+                decision=decision,
+                reviewer=request.user,
+                review_round=task.review_round,
+                comment=comment,
+                extra={'return_to_stage': return_to_stage},
+            )
+
+            update_fields = ['updated_by', 'updated_at']
+            task.updated_by = request.user
+
+            if reviewed_annotation is not None:
+                task.current_annotation = reviewed_annotation
+                update_fields.append('current_annotation')
+
+            if review_type == TaskReview.ReviewType.REVIEW:
+                if decision in {TaskReview.Decision.APPROVED, TaskReview.Decision.FIXED_AND_APPROVED}:
+                    task.review_submitted_at = timezone.now()
+                    task.workflow_status = (
+                        Task.WorkflowStatus.PENDING_FINAL_REVIEW
+                        if task.project.enable_final_review_stage
+                        else Task.WorkflowStatus.COMPLETED
+                    )
+                    update_fields.extend(['review_submitted_at', 'workflow_status'])
+                    if task.workflow_status == Task.WorkflowStatus.COMPLETED:
+                        task.is_workflow_locked = True
+                        task.workflow_completed_at = timezone.now()
+                        update_fields.extend(['is_workflow_locked', 'workflow_completed_at'])
+                else:
+                    task.reject_count += 1
+                    task.workflow_status = Task.WorkflowStatus.REVIEW_REJECTED
+                    task.review_round += 1
+                    update_fields.extend(['reject_count', 'workflow_status', 'review_round'])
+                    task.review_reject_logs.create(
+                        task_review=review,
+                        from_stage='REVIEW',
+                        to_stage='ANNOTATION',
+                        operator=request.user,
+                        reason=comment or 'Rejected in review',
+                    )
+            else:
+                if decision in {TaskReview.Decision.APPROVED, TaskReview.Decision.FIXED_AND_APPROVED}:
+                    task.final_reviewed_at = timezone.now()
+                    task.workflow_status = Task.WorkflowStatus.COMPLETED
+                    task.is_workflow_locked = True
+                    task.workflow_completed_at = timezone.now()
+                    update_fields.extend(
+                        ['final_reviewed_at', 'workflow_status', 'is_workflow_locked', 'workflow_completed_at']
+                    )
+                else:
+                    target_stage = return_to_stage or 'REVIEW'
+                    if target_stage == 'ANNOTATION':
+                        task.workflow_status = Task.WorkflowStatus.FINAL_REJECTED
+                        task.review_round += 1
+                        update_fields.append('review_round')
+                    else:
+                        task.workflow_status = Task.WorkflowStatus.PENDING_REVIEW
+                    task.reject_count += 1
+                    update_fields.extend(['workflow_status', 'reject_count'])
+                    task.review_reject_logs.create(
+                        task_review=review,
+                        from_stage='FINAL',
+                        to_stage=target_stage,
+                        operator=request.user,
+                        reason=comment or 'Rejected in final review',
+                    )
+
+            task.save(update_fields=list(dict.fromkeys(update_fields)), skip_fsm=True)
+            task.workflow_logs.create(
+                from_status=previous_status,
+                to_status=task.workflow_status,
+                action_type=f'{review_type}_{decision}',
+                operator=request.user,
+                operator_role=getattr(request.user.get_active_organization_membership(), 'role', None),
+                annotation=task.current_annotation,
+                task_review=review,
+                payload={'comment': comment, 'return_to_stage': return_to_stage},
+            )
+
+        return Response(
+            {
+                'task_id': task.id,
+                'review_id': review.id,
+                'review_type': review.review_type,
+                'decision': review.decision,
+                'workflow_status': task.workflow_status,
+            },
+            status=201,
+        )
+
+
+@extend_schema(exclude=True)
+class TaskReopenAPI(generics.CreateAPIView):
+    permission_required = ViewClassPermission(POST=all_permissions.tasks_change)
+    serializer_class = TaskReopenSerializer
+    queryset = Task.objects.all()
+
+    def get_object(self):
+        return generics.get_object_or_404(Task.objects.for_user(self.request.user), pk=self.kwargs['pk'])
+
+    def create(self, request, *args, **kwargs):
+        task = self.get_object()
+        if not _can_manage_workflow_task(request.user, task):
+            raise PermissionDenied('You do not have permission to reopen this task')
+        if task.workflow_status != Task.WorkflowStatus.COMPLETED:
+            raise ValidationError('Only completed tasks can be reopened')
+
+        serializer = self.get_serializer(data=request.data, context={'task': task, 'request': request})
+        serializer.is_valid(raise_exception=True)
+
+        target_stage = serializer.validated_data['target_stage']
+        reason = serializer.validated_data.get('reason')
+
+        if target_stage == 'ANNOTATION':
+            next_status = Task.WorkflowStatus.REOPENED
+        elif target_stage == 'REVIEW':
+            next_status = Task.WorkflowStatus.PENDING_REVIEW
+        else:
+            next_status = Task.WorkflowStatus.PENDING_FINAL_REVIEW
+
+        with transaction.atomic():
+            previous_status = task.workflow_status
+            task.reopen_count += 1
+            task.is_workflow_locked = False
+            task.workflow_status = next_status
+            task.updated_by = request.user
+            task.workflow_completed_at = None
+            task.final_reviewed_at = None
+            task.save(
+                update_fields=[
+                    'reopen_count',
+                    'is_workflow_locked',
+                    'workflow_status',
+                    'updated_by',
+                    'workflow_completed_at',
+                    'final_reviewed_at',
+                    'updated_at',
+                ],
+                skip_fsm=True,
+            )
+            review = TaskReview.objects.create(
+                task=task,
+                annotation=task.current_annotation,
+                reviewed_annotation=task.current_annotation,
+                review_type=TaskReview.ReviewType.FINAL_REVIEW,
+                decision=TaskReview.Decision.REOPENED,
+                reviewer=request.user,
+                review_round=task.review_round,
+                comment=reason,
+                extra={'target_stage': target_stage},
+            )
+            task.workflow_logs.create(
+                from_status=previous_status,
+                to_status=task.workflow_status,
+                action_type='REOPEN',
+                operator=request.user,
+                operator_role=getattr(request.user.get_active_organization_membership(), 'role', None),
+                annotation=task.current_annotation,
+                task_review=review,
+                payload={'target_stage': target_stage, 'reason': reason},
+            )
+
+        return Response(
+            {
+                'task_id': task.id,
+                'workflow_status': task.workflow_status,
+                'reopen_count': task.reopen_count,
+            },
+            status=201,
+        )
 
 
 @method_decorator(

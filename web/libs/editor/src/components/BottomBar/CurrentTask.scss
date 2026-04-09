@@ -30,10 +30,25 @@
     grid-area: id;
     color: var(--color-neutral-content);
     user-select: text;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-tight);
 
     &::before {
       content: '#';
     }
+  }
+
+  &__workflow-status {
+    @apply text-body-smaller;
+
+    display: inline-flex;
+    align-items: center;
+    padding: 0 8px;
+    height: 20px;
+    border-radius: 999px;
+    background: var(--color-primary-emphasis);
+    color: var(--color-primary-content);
   }
 
   &__task-count {
@@ -111,4 +126,3 @@
     }
   }
 }
-

@@ -902,7 +902,23 @@ class TaskManager(models.Manager):
         return TaskQuerySet(self.model, using=self._db)
 
     def for_user(self, user):
-        return self.get_queryset().filter(project__organization=user.active_organization)
+        if getattr(user, 'is_superuser', False):
+            return self.get_queryset().filter(project__organization=user.active_organization)
+        if not getattr(user, 'active_organization', None):
+            return self.get_queryset().none()
+
+        queryset = self.get_queryset().filter(project__organization=user.active_organization)
+        membership = user.get_active_organization_membership() if hasattr(user, 'get_active_organization_membership') else None
+        if membership and membership.role in membership.MANAGEABLE_ROLES:
+            return queryset
+
+        return queryset.filter(
+            Q(project__members__user=user, project__members__enabled=True)
+            | Q(current_annotator=user)
+            | Q(current_reviewer=user)
+            | Q(current_final_reviewer=user)
+            | Q(workflow_assignments__user=user, workflow_assignments__is_active=True)
+        ).distinct()
 
     def with_state(self):
         """Return queryset with FSM state annotated."""

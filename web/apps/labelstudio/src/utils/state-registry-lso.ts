@@ -55,6 +55,86 @@ stateRegistry.registerBatch({
       task: "Task has been completed",
     },
   },
+
+  UNASSIGNED: {
+    type: StateType.INITIAL,
+    label: "Unassigned",
+    tooltips: {
+      task: "Task has not been assigned yet",
+    },
+  },
+
+  PENDING_ANNOTATION: {
+    type: StateType.IN_PROGRESS,
+    label: "Pending Annotation",
+    tooltips: {
+      task: "Task is assigned and waiting for annotation",
+    },
+  },
+
+  ANNOTATING: {
+    type: StateType.IN_PROGRESS,
+    label: "Annotating",
+    tooltips: {
+      task: "Task is currently being annotated",
+    },
+  },
+
+  PENDING_REVIEW: {
+    type: StateType.ATTENTION,
+    label: "Pending Review",
+    tooltips: {
+      task: "Task is waiting for reviewer approval",
+    },
+  },
+
+  REVIEWING: {
+    type: StateType.ATTENTION,
+    label: "Reviewing",
+    tooltips: {
+      task: "Task is being reviewed",
+    },
+  },
+
+  REVIEW_REJECTED: {
+    type: StateType.ATTENTION,
+    label: "Review Rejected",
+    tooltips: {
+      task: "Task was rejected by reviewer and returned for changes",
+    },
+  },
+
+  PENDING_FINAL_REVIEW: {
+    type: StateType.ATTENTION,
+    label: "Pending Final Review",
+    tooltips: {
+      task: "Task is waiting for final review",
+    },
+  },
+
+  FINAL_REVIEWING: {
+    type: StateType.ATTENTION,
+    label: "Final Reviewing",
+    tooltips: {
+      task: "Task is being reviewed by final reviewer",
+    },
+  },
+
+  FINAL_REJECTED: {
+    type: StateType.ATTENTION,
+    label: "Final Rejected",
+    tooltips: {
+      task: "Task was rejected during final review",
+    },
+  },
+
+  REOPENED: {
+    type: StateType.IN_PROGRESS,
+    label: "Reopened",
+    tooltips: {
+      task: "Task was reopened and sent back into workflow",
+    },
+  },
 });
 
 // ============================================================================
@@ -66,7 +146,21 @@ stateRegistry.registerBatch({
  * This helps catch configuration issues early.
  */
 if (process.env.NODE_ENV === "development") {
-  const lsoStates = ["CREATED", "ANNOTATION_IN_PROGRESS", "COMPLETED"];
+  const lsoStates = [
+    "CREATED",
+    "ANNOTATION_IN_PROGRESS",
+    "COMPLETED",
+    "UNASSIGNED",
+    "PENDING_ANNOTATION",
+    "ANNOTATING",
+    "PENDING_REVIEW",
+    "REVIEWING",
+    "REVIEW_REJECTED",
+    "PENDING_FINAL_REVIEW",
+    "FINAL_REVIEWING",
+    "FINAL_REJECTED",
+    "REOPENED",
+  ];
 
   const missingStates = lsoStates.filter((state) => !stateRegistry.isRegistered(state));
 

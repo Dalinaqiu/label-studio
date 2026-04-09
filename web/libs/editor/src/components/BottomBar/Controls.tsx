@@ -19,7 +19,7 @@ import {
   AcceptButton,
   ButtonTooltip,
   controlsInjector,
-  RejectButtonDefinition,
+  getRejectButtonDefinition,
   SkipButton,
   UnskipButton,
 } from "./buttons";
@@ -44,6 +44,23 @@ type ControlButtonProps = {
 };
 
 export const EMPTY_SUBMIT_TOOLTIP = "Empty annotations denied in this project";
+const WORKFLOW_REJECTED_STATUSES = ["REVIEW_REJECTED", "FINAL_REJECTED"];
+
+const getAnnotationStageSubmitLabel = (workflowStatus?: string | null) => {
+  if (WORKFLOW_REJECTED_STATUSES.includes(workflowStatus ?? "")) return "重新提交审核";
+  return "Submit";
+};
+
+const getAnnotationStageSubmitTooltip = (workflowStatus?: string | null, submitDisabled?: boolean) => {
+  if (submitDisabled) return EMPTY_SUBMIT_TOOLTIP;
+  if (WORKFLOW_REJECTED_STATUSES.includes(workflowStatus ?? "")) return "修改后重新提交审核：[ Ctrl+Enter ]";
+  return "Save results: [ Ctrl+Enter ]";
+};
+
+const getAnnotationStageUpdateLabel = (workflowStatus?: string | null, isUpdate?: boolean) => {
+  if (WORKFLOW_REJECTED_STATUSES.includes(workflowStatus ?? "")) return "重新提交审核";
+  return isUpdate ? "Update" : "Submit";
+};
 
 /**
  * Custom action button component, rendering buttons from store.customButtons
@@ -70,6 +87,9 @@ export const Controls = controlsInjector<{ annotation: MSTAnnotation }>(
   observer(({ store, history, annotation }) => {
     const isReview = store.hasInterface("review") || annotation.canBeReviewed;
     const isNotQuickView = store.hasInterface("topbar:prevnext");
+    const workflowStatus = (store.task as any)?.workflow_status ?? null;
+    const isWorkflowRejectedAnnotationStage =
+      !isReview && WORKFLOW_REJECTED_STATUSES.includes(workflowStatus ?? "");
     const historySelected = isDefined(store.annotationStore.selectedHistory);
     const { userGenerate, sentUserGenerate, versions, results, editable: annotationEditable } = annotation;
     const dropdownTrigger = cn("dropdown").elem("trigger").toClassName();
@@ -154,7 +174,7 @@ export const Controls = controlsInjector<{ annotation: MSTAnnotation }>(
     if (isReview) {
       const customRejectButtons = toArray(customButtons.get("reject"));
       const hasCustomReject = customRejectButtons.length > 0;
-      const originalRejectButton = RejectButtonDefinition;
+      const originalRejectButton = getRejectButtonDefinition(store);
 
       // @todo implement reuse of internal buttons later (they are set as strings)
       const rejectButtons: CustomButtonType[] = hasCustomReject
@@ -187,7 +207,7 @@ export const Controls = controlsInjector<{ annotation: MSTAnnotation }>(
       );
       buttons.push(<UnskipButton key="unskip" disabled={disabled} store={store} />);
     } else {
-      if (store.hasInterface("skip")) {
+      if (store.hasInterface("skip") && !isWorkflowRejectedAnnotationStage) {
         const onSkipWithComment = (e: React.MouseEvent, action: () => any) => {
           handleActionWithComments(e, action, "Please enter a comment before skipping");
         };
@@ -241,7 +261,7 @@ export const Controls = controlsInjector<{ annotation: MSTAnnotation }>(
       };
 
       if (userGenerate || (store.explore && !userGenerate && store.hasInterface("submit"))) {
-        const title = submitDisabled ? EMPTY_SUBMIT_TOOLTIP : "Save results: [ Ctrl+Enter ]";
+        const title = getAnnotationStageSubmitTooltip(workflowStatus, submitDisabled);
 
         buttons.push(
           <ButtonTooltip key="submit" title={title}>
@@ -262,7 +282,7 @@ export const Controls = controlsInjector<{ annotation: MSTAnnotation }>(
                   }}
                   data-testid="bottombar-submit-button"
                 >
-                  Submit
+                  {getAnnotationStageSubmitLabel(workflowStatus)}
                 </Button>
                 {useExitOption ? (
                   <Dropdown.Trigger
@@ -292,7 +312,18 @@ export const Controls = controlsInjector<{ annotation: MSTAnnotation }>(
         const noChanges = isFF(FF_REVIEWER_FLOW) && !history.canUndo && !annotation.draftId;
         const isUpdateDisabled = isDisabled || noChanges;
         const button = (
-          <ButtonTooltip key="update" title={noChanges ? "No changes were made" : "Update this task: [ Ctrl+Enter ]"}>
+          <ButtonTooltip
+            key="update"
+            title={
+              noChanges
+                ? isWorkflowRejectedAnnotationStage
+                  ? "请先修改后再重新提交审核"
+                  : "No changes were made"
+                : isWorkflowRejectedAnnotationStage
+                  ? "修改后重新提交审核：[ Ctrl+Enter ]"
+                  : "Update this task: [ Ctrl+Enter ]"
+            }
+          >
             <ButtonGroup>
               <Button
                 aria-label="submit"
@@ -309,7 +340,7 @@ export const Controls = controlsInjector<{ annotation: MSTAnnotation }>(
                 }}
                 data-testid="bottombar-update-button"
               >
-                {isUpdate ? "Update" : "Submit"}
+                {getAnnotationStageUpdateLabel(workflowStatus, isUpdate)}
               </Button>
               {useExitOption ? (
                 <Dropdown.Trigger

@@ -54,6 +54,15 @@ export const APIConfig = {
     /** Update annotation */
     updateAnnotation: "PATCH:/../annotations/:annotationID",
 
+    /** Submit current annotation into workflow review */
+    submitTaskReview: "POST:/../tasks/:taskID/submit-review",
+
+    /** Reviewer/final reviewer workflow decision */
+    taskReviewDecision: "POST:/../tasks/:taskID/review-decisions",
+
+    /** Reopen a completed workflow task */
+    reopenTask: "POST:/../tasks/:taskID/reopen",
+
     /** Delete annotation */
     deleteAnnotation: "DELETE:/../annotations/:annotationID",
 

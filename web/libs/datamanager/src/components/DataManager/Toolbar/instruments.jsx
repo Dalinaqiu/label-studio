@@ -16,6 +16,7 @@ import { LoadingPossum } from "./LoadingPossum";
 import { OrderButton } from "./OrderButton";
 import { RefreshButton } from "./RefreshButton";
 import { ViewToggle } from "./ViewToggle";
+import { WorkflowScopeToggle } from "./WorkflowScopeToggle";
 
 const style = {
   minWidth: "80px",
@@ -93,6 +94,9 @@ export const instruments = {
   },
   filters: ({ size }) => {
     return <FiltersPane size={size} style={style} />;
+  },
+  "workflow-scope": ({ size }) => {
+    return <WorkflowScopeToggle size={size} />;
   },
   ordering: ({ size }) => {
     return <OrderButton size={size} style={style} />;

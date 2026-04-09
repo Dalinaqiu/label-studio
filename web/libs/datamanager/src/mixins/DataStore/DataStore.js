@@ -290,6 +290,7 @@ export const DataStore = (modelName, { listItemType, apiMethod, properties, asso
         }
 
         self.postProcessData?.(data);
+        root.syncLabelingSelectionWithDataStore?.();
 
         self.loading = false;
 

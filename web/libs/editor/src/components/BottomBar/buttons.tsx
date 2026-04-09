@@ -48,6 +48,25 @@ type AcceptButtonProps = {
   store: MSTStore;
 };
 
+const isFinalReviewStage = (store: MSTStore) =>
+  ["PENDING_FINAL_REVIEW", "FINAL_REVIEWING"].includes((store.task as any)?.workflow_status ?? "");
+
+const getAcceptLabel = (store: MSTStore, hasChanges: boolean) => {
+  if (isFinalReviewStage(store)) return hasChanges ? "修正并终审通过" : "终审通过";
+  return hasChanges ? "修正并通过" : "审核通过";
+};
+
+const getAcceptTooltip = (store: MSTStore) =>
+  isFinalReviewStage(store) ? "Final review approve: [ Ctrl+Enter ]" : "Approve review: [ Ctrl+Enter ]";
+
+const getRejectLabel = (store: MSTStore) => {
+  if (isFinalReviewStage(store)) return "退回审核";
+  return "退回标注";
+};
+
+const getRejectTooltip = (store: MSTStore) =>
+  isFinalReviewStage(store) ? "Return to reviewer: [ Ctrl+Space ]" : "Return to annotator: [ Ctrl+Space ]";
+
 export const AcceptButton = memo(
   observer(({ disabled, history, store }: AcceptButtonProps) => {
     const annotation = store.annotationStore.selected;
@@ -57,7 +76,7 @@ export const AcceptButton = memo(
     return (
       <Button
         key="accept"
-        tooltip="Accept annotation: [ Ctrl+Enter ]"
+        tooltip={getAcceptTooltip(store)}
         aria-label="accept-annotation"
         disabled={disabled}
         onClick={async () => {
@@ -67,7 +86,7 @@ export const AcceptButton = memo(
         }}
         data-testid="bottombar-accept-button"
       >
-        {hasChanges ? "Fix + Accept" : "Accept"}
+        {getAcceptLabel(store, hasChanges)}
       </Button>
     );
   }),
@@ -76,14 +95,20 @@ export const AcceptButton = memo(
 export const RejectButtonDefinition = {
   id: "reject",
   name: "reject",
-  title: "Reject",
+  title: "退回",
   variant: "negative",
   look: "outlined",
   ariaLabel: "reject-annotation",
-  tooltip: "Reject annotation: [ Ctrl+Space ]",
+  tooltip: "Return task: [ Ctrl+Space ]",
   // @todo we need this for types compatibility, but better to fix CustomButtonType
   disabled: false,
 };
+
+export const getRejectButtonDefinition = (store: MSTStore) => ({
+  ...RejectButtonDefinition,
+  title: getRejectLabel(store),
+  tooltip: getRejectTooltip(store),
+});
 
 type SkipButtonProps = {
   disabled: boolean;

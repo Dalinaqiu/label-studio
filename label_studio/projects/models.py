@@ -110,7 +110,23 @@ class ProjectManager(models.Manager):
         return ProjectQuerySetWithFSM(self.model, using=self._db)
 
     def for_user(self, user):
-        return self.get_queryset().filter(organization=user.active_organization)
+        if getattr(user, 'is_superuser', False):
+            return self.get_queryset().filter(organization=user.active_organization)
+        if not getattr(user, 'active_organization', None):
+            return self.get_queryset().none()
+
+        queryset = self.get_queryset().filter(organization=user.active_organization)
+        membership = user.get_active_organization_membership()
+        if membership and membership.role in membership.MANAGEABLE_ROLES:
+            return queryset
+
+        return queryset.filter(
+            Q(members__user=user, members__enabled=True)
+            | Q(tasks__current_annotator=user)
+            | Q(tasks__current_reviewer=user)
+            | Q(tasks__current_final_reviewer=user)
+            | Q(tasks__workflow_assignments__user=user, tasks__workflow_assignments__is_active=True)
+        ).distinct()
 
     def with_state(self):
         """
@@ -162,6 +178,16 @@ recalculate_all_stats = load_func(settings.RECALCULATE_ALL_STATS)
 
 
 class Project(ProjectMixin, FsmHistoryStateModel):
+    class WorkflowMode(models.TextChoices):
+        STANDARD = 'STANDARD', _('Standard')
+        SIMPLE_REVIEW = 'SIMPLE_REVIEW', _('Simple review')
+        CUSTOM_FUTURE = 'CUSTOM_FUTURE', _('Custom future')
+
+    class TaskAssignmentMode(models.TextChoices):
+        MANUAL = 'MANUAL', _('Manual')
+        HYBRID = 'HYBRID', _('Hybrid')
+        AUTO_FUTURE = 'AUTO_FUTURE', _('Auto future')
+
     class SkipQueue(models.TextChoices):
         # requeue to the end of the same annotator’s queue => annotator gets this task at the end of the queue
         REQUEUE_FOR_ME = 'REQUEUE_FOR_ME', 'Requeue for me'
@@ -349,6 +375,63 @@ class Project(ProjectMixin, FsmHistoryStateModel):
         help_text='Custom task lock TTL in seconds. If not set, the default value is used',
     )
 
+    workflow_enabled = models.BooleanField(
+        _('workflow enabled'),
+        default=False,
+        db_default=False,
+        help_text='Whether project uses explicit annotator-reviewer-admin workflow',
+    )
+    workflow_mode = models.CharField(
+        _('workflow mode'),
+        max_length=32,
+        choices=WorkflowMode.choices,
+        default=WorkflowMode.STANDARD,
+        help_text='Business workflow mode for the project',
+    )
+    enable_review_stage = models.BooleanField(
+        _('enable review stage'),
+        default=True,
+        db_default=True,
+        help_text='Whether reviewer step is enabled for the project',
+    )
+    enable_final_review_stage = models.BooleanField(
+        _('enable final review stage'),
+        default=True,
+        db_default=True,
+        help_text='Whether admin final review step is enabled for the project',
+    )
+    reviewer_can_edit = models.BooleanField(
+        _('reviewer can edit'),
+        default=True,
+        db_default=True,
+        help_text='Whether reviewer can modify annotation result directly',
+    )
+    admin_can_edit = models.BooleanField(
+        _('admin can edit'),
+        default=True,
+        db_default=True,
+        help_text='Whether admin can modify final result directly',
+    )
+    allow_final_reject_to_annotator = models.BooleanField(
+        _('allow final reject to annotator'),
+        default=True,
+        db_default=True,
+        help_text='Whether final reviewer can reject directly back to annotator',
+    )
+    allow_reopen_completed_task = models.BooleanField(
+        _('allow reopen completed task'),
+        default=True,
+        db_default=True,
+        help_text='Whether completed tasks can be reopened',
+    )
+    task_assignment_mode = models.CharField(
+        _('task assignment mode'),
+        max_length=32,
+        choices=TaskAssignmentMode.choices,
+        default=TaskAssignmentMode.MANUAL,
+        help_text='Task assignment mode for the project workflow',
+    )
+
     # Soft-delete lifecycle (OSS fields, used by LSE logic)
     deleted_at = models.DateTimeField(_('deleted at'), null=True, blank=True)
     deleted_by = models.ForeignKey(
@@ -493,6 +576,28 @@ class Project(ProjectMixin, FsmHistoryStateModel):
     def has_collaborator_enabled(self, user):
         membership = ProjectMember.objects.filter(user=user, project=self)
         return membership.exists() and membership.first().enabled
+
+    def has_permission(self, user):
+        user.project = self  # link for activity log
+
+        if getattr(user, 'is_superuser', False):
+            return True
+        if self.organization_id != getattr(user, 'active_organization_id', None):
+            return False
+
+        membership = user.get_active_organization_membership() if hasattr(user, 'get_active_organization_membership') else None
+        if membership and membership.role in membership.MANAGEABLE_ROLES:
+            return True
+
+        if ProjectMember.objects.filter(user=user, project=self, enabled=True).exists():
+            return True
+
+        return self.tasks.filter(
+            Q(current_annotator=user)
+            | Q(current_reviewer=user)
+            | Q(current_final_reviewer=user)
+            | Q(workflow_assignments__user=user, workflow_assignments__is_active=True)
+        ).exists()
 
     def _update_tasks_states(
         self, maximum_annotations_changed, overlap_cohort_percentage_changed, tasks_number_changed
@@ -1391,6 +1496,48 @@ class ProjectMember(models.Model):
     enabled = models.BooleanField(default=True, help_text='Project member is enabled')
     created_at = models.DateTimeField(_('created at'), auto_now_add=True)
     updated_at = models.DateTimeField(_('updated at'), auto_now=True)
+
+
+class ProjectMemberRole(models.Model):
+    class Role(models.TextChoices):
+        OWNER = 'OW', _('Owner')
+        ADMIN = 'AD', _('Administrator')
+        MANAGER = 'MA', _('Manager')
+        REVIEWER = 'RE', _('Reviewer')
+        ANNOTATOR = 'AN', _('Annotator')
+        VIEWER = 'VI', _('Viewer')
+
+    project_member = models.ForeignKey(
+        ProjectMember,
+        on_delete=models.CASCADE,
+        related_name='roles',
+        help_text='Project member ID',
+    )
+    role = models.CharField(
+        _('role'),
+        max_length=2,
+        choices=Role.choices,
+        help_text='Project-scoped role',
+    )
+    granted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='granted_project_member_roles',
+        help_text='User who granted the project role',
+    )
+    created_at = models.DateTimeField(_('created at'), auto_now_add=True)
+    updated_at = models.DateTimeField(_('updated at'), auto_now=True)
+
+    class Meta:
+        db_table = 'project_member_role'
+        constraints = [
+            models.UniqueConstraint(fields=['project_member', 'role'], name='unique_project_member_role'),
+        ]
+        indexes = [
+            models.Index(fields=['role']),
+            models.Index(fields=['granted_by']),
+        ]
 
 
 class ProjectSummary(models.Model):

@@ -41,6 +41,10 @@ const errorHandlerAllowPaused = (result) => {
   return !isPaused;
 };
 
+const WORKFLOW_REVIEW_STATUSES = ["PENDING_REVIEW", "REVIEWING"];
+const WORKFLOW_FINAL_REVIEW_STATUSES = ["PENDING_FINAL_REVIEW", "FINAL_REVIEWING"];
+const WORKFLOW_ANNOTATION_STATUSES = ["PENDING_ANNOTATION", "ANNOTATING", "REVIEW_REJECTED", "FINAL_REJECTED", "REOPENED"];
+
 // Support portal URL constants used to construct error reporting links
 // These are used in showOperationToast() to create support links with request IDs
 // for better error tracking and customer support
@@ -137,6 +141,10 @@ export class LSFWrapper {
       );
     }
 
+    if (this.isWorkflowReviewStage || this.isWorkflowFinalReviewStage) {
+      interfaces.push("review");
+    }
+
     if (this.datamanager.hasInterface("instruction")) {
       interfaces.push("instruction");
     }
@@ -198,6 +206,8 @@ export class LSFWrapper {
       onSubmitAnnotation: this.onSubmitAnnotation,
       onUpdateAnnotation: this.onUpdateAnnotation,
       onDeleteAnnotation: this.onDeleteAnnotation,
+      onAcceptAnnotation: this.onAcceptAnnotation,
+      onRejectAnnotation: this.onRejectAnnotation,
       onSkipTask: this.onSkipTask,
       onUnskipTask: this.onUnskipTask,
       onGroundTruth: this.onGroundTruth,
@@ -623,6 +633,56 @@ export class LSFWrapper {
 
   /** @private */
   onSubmitAnnotation = async () => {
+    if (this.isWorkflowAnnotationStage) {
+      const exitStream = this.shouldExitStream();
+      const loadNext = exitStream ? false : this.shouldLoadNext();
+      const saveResult = await this.submitCurrentAnnotation(
+        "submitAnnotation",
+        async (taskID, body) => {
+          return await this.datamanager.apiCall(
+            "submitAnnotation",
+            { taskID },
+            { body },
+            { errorHandler: errorHandlerAllowPaused },
+          );
+        },
+        false,
+        false,
+      );
+
+      if (saveResult?.$meta?.status >= 400 || saveResult?.id === undefined) {
+        this.showOperationToast(saveResult?.$meta?.status, "Annotation saved successfully", "Annotation is not saved", saveResult);
+        return;
+      }
+
+      const workflowResult = await this.withinLoadingState(async () => {
+        return this.datamanager.apiCall(
+          "submitTaskReview",
+          { taskID: this.task.id },
+          { body: { annotation_id: saveResult.id } },
+          { errorHandler: errorHandlerAllowPaused },
+        );
+      });
+
+      this.showOperationToast(
+        workflowResult?.$meta?.status,
+        "Annotation submitted for review",
+        "Annotation was not submitted for review",
+        workflowResult,
+      );
+
+      if (workflowResult?.$meta?.status < 400) {
+        if (!loadNext || this.datamanager.isExplorer) {
+          await this.loadTask(this.task.id, saveResult.id, true);
+        } else {
+          await this.loadTask();
+        }
+      }
+
+      if (exitStream) return this.exitStream();
+      return;
+    }
+
     const exitStream = this.shouldExitStream();
     const loadNext = exitStream ? false : this.shouldLoadNext();
     const result = await this.submitCurrentAnnotation(
@@ -644,6 +704,51 @@ export class LSFWrapper {
     this.showOperationToast(status, "Annotation saved successfully", "Annotation is not saved", result);
 
     if (exitStream) return this.exitStream();
+  };
+
+  onAcceptAnnotation = async (_, { isDirty, entity }) => {
+    if (!this.isWorkflowReviewStage && !this.isWorkflowFinalReviewStage) return;
+    const wasFinalReviewStage = this.isWorkflowFinalReviewStage;
+
+    const annotationId = await this.ensureWorkflowAnnotationSaved(isDirty, entity);
+    if (!annotationId) return;
+
+    const result = await this.runWorkflowDecision({
+      decision: "APPROVED",
+      reviewed_annotation_id: annotationId,
+    });
+
+    if (result?.$meta?.status >= 400) return;
+
+    const successMessage = wasFinalReviewStage ? "Final review approved" : "Review approved";
+
+    this.showOperationToast(result?.$meta?.status, successMessage, "Workflow decision failed", result);
+  };
+
+  onRejectAnnotation = async (_, { isDirty, entity, comment }) => {
+    if (!this.isWorkflowReviewStage && !this.isWorkflowFinalReviewStage) return;
+    const wasFinalReviewStage = this.isWorkflowFinalReviewStage;
+
+    const annotationId = await this.ensureWorkflowAnnotationSaved(isDirty, entity);
+    if (!annotationId) return;
+
+    const body = {
+      decision: "REJECTED",
+      reviewed_annotation_id: annotationId,
+      comment,
+    };
+
+    if (this.isWorkflowFinalReviewStage) {
+      body.return_to_stage = "REVIEW";
+    }
+
+    const result = await this.runWorkflowDecision(body);
+
+    if (result?.$meta?.status >= 400) return;
+
+    const successMessage = wasFinalReviewStage ? "Final review rejected" : "Review rejected";
+
+    this.showOperationToast(result?.$meta?.status, successMessage, "Workflow decision failed", result);
   };
 
   /** @private */
@@ -940,6 +1045,7 @@ export class LSFWrapper {
     this.saveDraft();
     this.loadTask(prevTaskId, prevAnnotationId, true);
   };
+
   async submitCurrentAnnotation(eventName, submit, includeId = false, loadNext = true) {
     const { taskID, currentAnnotation } = this;
     const unique_id = this.task.unique_lock_id;
@@ -1125,5 +1231,84 @@ export class LSFWrapper {
 
   get canPreloadTask() {
     return Boolean(this.preload?.interaction);
+  }
+
+  get workflowStatus() {
+    return this.task?.workflow_status;
+  }
+
+  get isWorkflowEnabled() {
+    return this.project?.workflow_enabled === true;
+  }
+
+  get isWorkflowAnnotationStage() {
+    return this.isWorkflowEnabled && WORKFLOW_ANNOTATION_STATUSES.includes(this.workflowStatus);
+  }
+
+  get isWorkflowReviewStage() {
+    return this.isWorkflowEnabled && WORKFLOW_REVIEW_STATUSES.includes(this.workflowStatus);
+  }
+
+  get isWorkflowFinalReviewStage() {
+    return this.isWorkflowEnabled && WORKFLOW_FINAL_REVIEW_STATUSES.includes(this.workflowStatus);
+  }
+
+  async ensureWorkflowAnnotationSaved(isDirty, entity) {
+    if (!isDirty) {
+      return entity?.pk ?? this.currentAnnotation?.pk;
+    }
+
+    const eventName = entity?.exists ? "updateAnnotation" : "submitAnnotation";
+    const result = await this.submitCurrentAnnotation(
+      eventName,
+      async (taskID, body) => {
+        if (entity?.exists) {
+          return this.datamanager.apiCall(
+            "updateAnnotation",
+            { taskID, annotationID: entity.pk },
+            { body },
+            { errorHandler: errorHandlerAllowPaused },
+          );
+        }
+
+        return this.datamanager.apiCall(
+          "submitAnnotation",
+          { taskID },
+          { body },
+          { errorHandler: errorHandlerAllowPaused },
+        );
+      },
+      false,
+      false,
+    );
+
+    if (result?.$meta?.status >= 400) return null;
+
+    return result?.id ?? entity?.pk ?? this.currentAnnotation?.pk;
+  }
+
+  async runWorkflowDecision(body) {
+    const exitStream = this.shouldExitStream();
+    const loadNext = exitStream ? false : this.shouldLoadNext();
+    const result = await this.withinLoadingState(async () => {
+      return this.datamanager.apiCall(
+        "taskReviewDecision",
+        { taskID: this.task.id },
+        { body },
+        { errorHandler: errorHandlerAllowPaused },
+      );
+    });
+
+    if (result?.$meta?.status < 400) {
+      if (!loadNext || this.datamanager.isExplorer) {
+        await this.loadTask(this.task.id);
+      } else {
+        await this.loadTask();
+      }
+    }
+
+    if (exitStream) this.exitStream();
+
+    return result;
   }
 }

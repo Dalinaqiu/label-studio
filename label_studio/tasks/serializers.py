@@ -23,7 +23,15 @@ from rest_framework.fields import SkipField
 from rest_framework.serializers import ModelSerializer
 from rest_framework.settings import api_settings
 from tasks.exceptions import AnnotationDuplicateError
-from tasks.models import Annotation, AnnotationDraft, Prediction, PredictionMeta, Task
+from tasks.models import (
+    Annotation,
+    AnnotationDraft,
+    Prediction,
+    PredictionMeta,
+    Task,
+    TaskAssignment,
+    TaskReview,
+)
 from tasks.validation import TaskValidator
 from users.models import User
 from users.serializers import UserSerializer
@@ -34,6 +42,94 @@ logger = logging.getLogger(__name__)
 class PredictionQuerySerializer(serializers.Serializer):
     task = serializers.IntegerField(required=False, help_text='Task ID to filter predictions')
     project = serializers.IntegerField(required=False, help_text='Project ID to filter predictions')
+
+
+class TaskAssignmentSerializer(serializers.Serializer):
+    assignment_type = serializers.ChoiceField(choices=TaskAssignment.AssignmentType.choices)
+    user_id = serializers.IntegerField(required=True, help_text='Assignee user ID')
+    reason = serializers.CharField(required=False, allow_blank=True, allow_null=True, max_length=255)
+
+    def validate(self, attrs):
+        task = self.context['task']
+        user_id = attrs['user_id']
+
+        try:
+            user = (
+                User.objects.filter(
+                    id=user_id,
+                    organizations=task.project.organization,
+                    om_through__deleted_at__isnull=True,
+                )
+                .distinct()
+                .get()
+            )
+        except User.DoesNotExist as exc:
+            raise ValidationError('Assignee must belong to the same organization as the task') from exc
+
+        if not user.is_project_member(task.project):
+            raise ValidationError('Assignee must be an enabled member of the project')
+
+        attrs['assignee'] = user
+        return attrs
+
+
+class TaskSubmitReviewSerializer(serializers.Serializer):
+    annotation_id = serializers.IntegerField(required=True, help_text='Submitted annotation ID')
+
+    def validate(self, attrs):
+        task = self.context['task']
+        user = self.context['request'].user
+        annotation_id = attrs['annotation_id']
+
+        try:
+            annotation = Annotation.objects.get(task=task, id=annotation_id)
+        except Annotation.DoesNotExist as exc:
+            raise ValidationError('Annotation does not belong to this task') from exc
+
+        if (
+            not user.has_manageable_organization_role()
+            and annotation.completed_by_id != user.id
+            and task.current_annotator_id != user.id
+        ):
+            raise ValidationError('Only the assigned annotator can submit this annotation for review')
+
+        attrs['annotation'] = annotation
+        return attrs
+
+
+class TaskReviewDecisionSerializer(serializers.Serializer):
+    decision = serializers.ChoiceField(choices=TaskReview.Decision.choices)
+    comment = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    reviewed_annotation_id = serializers.IntegerField(required=False, allow_null=True)
+    return_to_stage = serializers.ChoiceField(
+        choices=[('ANNOTATION', 'Annotation'), ('REVIEW', 'Review')],
+        required=False,
+        allow_null=True,
+    )
+
+    def validate(self, attrs):
+        task = self.context['task']
+        reviewed_annotation_id = attrs.get('reviewed_annotation_id')
+        if reviewed_annotation_id is not None:
+            try:
+                reviewed_annotation = Annotation.objects.get(task=task, id=reviewed_annotation_id)
+            except Annotation.DoesNotExist as exc:
+                raise ValidationError('Reviewed annotation does not belong to this task') from exc
+            attrs['reviewed_annotation'] = reviewed_annotation
+        return attrs
+
+
+class TaskReopenSerializer(serializers.Serializer):
+    target_stage = serializers.ChoiceField(
+        choices=[
+            ('ANNOTATION', 'Annotation'),
+            ('REVIEW', 'Review'),
+            ('FINAL_REVIEW', 'Final review'),
+        ],
+        required=False,
+        default='ANNOTATION',
+    )
+    reason = serializers.CharField(required=False, allow_blank=True, allow_null=True)
 
 
 @extend_schema_field(

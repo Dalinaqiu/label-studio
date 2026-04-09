@@ -58,6 +58,13 @@ export interface APITask {
   overlap?: number;
 
   project?: number | null;
+  workflow_status?: string | null;
+  review_round?: number | null;
+  reject_count?: number | null;
+  reopen_count?: number | null;
+  current_annotator?: number | null;
+  current_reviewer?: number | null;
+  current_final_reviewer?: number | null;
 
   file_upload?: number | null;
   annotations?: APIAnnotation[];

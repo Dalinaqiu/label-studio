@@ -12,6 +12,20 @@ import { reaction } from "mobx";
 // Manager roles that can force-skip unskippable tasks (OW=Owner, AD=Admin, MA=Manager)
 const MANAGER_ROLES = ["OW", "AD", "MA"];
 
+const workflowStatusLabel = {
+  UNASSIGNED: "未分配",
+  PENDING_ANNOTATION: "待标注",
+  ANNOTATING: "标注中",
+  PENDING_REVIEW: "待审核",
+  REVIEWING: "审核中",
+  REVIEW_REJECTED: "审核退回",
+  PENDING_FINAL_REVIEW: "待终审",
+  FINAL_REVIEWING: "终审中",
+  FINAL_REJECTED: "终审退回",
+  COMPLETED: "已完成",
+  REOPENED: "已重开",
+};
+
 export const CurrentTask = observer(({ store }) => {
   const currentIndex = useMemo(() => {
     return store.taskHistory.findIndex((x) => x.taskId === store.task.id) + 1;
@@ -45,6 +59,7 @@ export const CurrentTask = observer(({ store }) => {
   const showCounter = store.hasInterface("topbar:task-counter");
 
   const task = store.task;
+  const workflowStatus = task?.workflow_status;
   const isEnterprise = window.APP_SETTINGS?.billing?.enterprise;
   const skipDisabled = isEnterprise ? task?.allow_skip === false : false;
   const userRole = window.APP_SETTINGS?.user?.role;
@@ -101,6 +116,11 @@ export const CurrentTask = observer(({ store }) => {
       <div className={cn("current-task").mod({ "with-history": historyEnabled }).toClassName()}>
         <div className={cn("current-task").elem("task-id").toClassName()}>
           {store.task.id ?? guidGenerator()}
+          {workflowStatus && (
+            <span className={cn("current-task").elem("workflow-status").toClassName()}>
+              {workflowStatusLabel[workflowStatus] ?? workflowStatus}
+            </span>
+          )}
           {historyEnabled &&
             showCounter &&
             (isFF(FF_TASK_COUNT_FIX) ? (
