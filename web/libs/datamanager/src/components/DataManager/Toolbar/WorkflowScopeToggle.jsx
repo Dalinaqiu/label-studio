@@ -1,4 +1,5 @@
 import { inject, observer } from "mobx-react";
+import { useEffect, useState } from "react";
 import { RadioGroup } from "../../Common/RadioGroup/RadioGroup";
 
 const OPTIONS = [
@@ -17,10 +18,16 @@ export const WorkflowScopeToggle = injector(
   observer(({ store, project, size, ...rest }) => {
     if (project?.workflow_enabled !== true) return null;
 
-    const currentValue = store.SDK.api.sharedParams?.workflow_scope ?? "";
+    const sharedValue = store.SDK.api.sharedParams?.workflow_scope ?? "";
+    const [currentValue, setCurrentValue] = useState(sharedValue);
+
+    useEffect(() => {
+      setCurrentValue(sharedValue);
+    }, [sharedValue]);
 
     const handleChange = async (event) => {
       const nextValue = event.target.value;
+      setCurrentValue(nextValue);
 
       if (nextValue) {
         store.SDK.api.sharedParams.workflow_scope = nextValue;
