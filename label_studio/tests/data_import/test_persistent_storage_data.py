@@ -2,7 +2,7 @@ from unittest import mock
 from unittest.mock import Mock
 
 import pytest
-from data_import.api import DownloadStorageData
+from data_import.api import DownloadStorageData, UploadedFileResponse
 from data_import.models import FileUpload
 from django.conf import settings
 from django.http import HttpResponse
@@ -107,6 +107,10 @@ class TestDownloadStorageData:
     @pytest.fixture
     def view(self):
         return DownloadStorageData()
+
+    @pytest.fixture
+    def uploaded_file_view(self):
+        return UploadedFileResponse()
 
     def test_missing_filepath_returns_404(self, api_factory, user, view):
         """Test that missing filepath parameter returns 404"""
@@ -267,6 +271,9 @@ class TestDownloadStorageData:
     @pytest.mark.parametrize(
         'file_extension,expected_content_type',
         [
+            ('test.dcm', 'application/dicom'),
+            ('test.svs', 'image/tiff'),
+            ('test.tif', 'image/tiff'),
             ('test.pdf', 'application/pdf'),
             ('test.mp3', 'audio/mpeg'),
             ('test.mp4', 'video/mp4'),
@@ -302,6 +309,82 @@ class TestDownloadStorageData:
         # Check that RangedFileResponse was called with the expected content type
         args, kwargs = mock_ranged_response.call_args
         assert kwargs['content_type'] == expected_content_type
+
+    @mock.patch('data_import.api.FileUpload.objects.filter')
+    @mock.patch('data_import.api.settings.USE_NGINX_FOR_UPLOADS', True)
+    @mock.patch('data_import.api.render_medical_image_preview_response')
+    def test_dicom_preview_bypasses_nginx(
+        self, mock_preview, mock_filter, api_factory, user, view, mock_file_upload
+    ):
+        mock_filter.return_value.last.return_value = mock_file_upload
+        mock_preview.return_value = HttpResponse(b'png', content_type='image/png')
+
+        request = api_factory.get(
+            '/storage-data/uploaded/',
+            {'filepath': f'{settings.UPLOAD_DIR}/study.dcm', 'preview': '1'},
+        )
+        request.user = user
+
+        response = view.get(request)
+
+        assert response['Content-Type'] == 'image/png'
+        mock_preview.assert_called_once()
+
+    @mock.patch('data_import.api.FileUpload.objects.filter')
+    @mock.patch('data_import.api.render_medical_image_preview_response')
+    def test_uploaded_file_response_dicom_preview(
+        self, mock_preview, mock_filter, api_factory, user, uploaded_file_view, mock_file_upload
+    ):
+        mock_file_upload.file.name = f'{settings.UPLOAD_DIR}/1/study.dcm'
+        mock_file_upload.file.storage.exists = Mock(return_value=True)
+        mock_filter.return_value.last.return_value = mock_file_upload
+        mock_preview.return_value = HttpResponse(b'png', content_type='image/png')
+
+        request = api_factory.get('/data/upload/1/study.dcm', {'preview': '1'})
+        request.user = user
+        uploaded_file_view.request = request
+
+        response = uploaded_file_view.get(request, filename='1/study.dcm')
+
+        assert response['Content-Type'] == 'image/png'
+        mock_preview.assert_called_once()
+
+    @mock.patch('data_import.api.FileUpload.objects.filter')
+    @mock.patch('data_import.api.settings.USE_NGINX_FOR_UPLOADS', True)
+    @mock.patch('data_import.api.render_medical_image_preview_response')
+    def test_wsi_preview_bypasses_nginx(self, mock_preview, mock_filter, api_factory, user, view, mock_file_upload):
+        mock_filter.return_value.last.return_value = mock_file_upload
+        mock_preview.return_value = HttpResponse(b'png', content_type='image/png')
+
+        request = api_factory.get(
+            '/storage-data/uploaded/',
+            {'filepath': f'{settings.UPLOAD_DIR}/slide.svs', 'preview': '1'},
+        )
+        request.user = user
+
+        response = view.get(request)
+
+        assert response['Content-Type'] == 'image/png'
+        mock_preview.assert_called_once()
+
+    @mock.patch('data_import.api.FileUpload.objects.filter')
+    @mock.patch('data_import.api.render_medical_image_preview_response')
+    def test_uploaded_file_response_wsi_preview(
+        self, mock_preview, mock_filter, api_factory, user, uploaded_file_view, mock_file_upload
+    ):
+        mock_file_upload.file.name = f'{settings.UPLOAD_DIR}/1/slide.svs'
+        mock_file_upload.file.storage.exists = Mock(return_value=True)
+        mock_filter.return_value.last.return_value = mock_file_upload
+        mock_preview.return_value = HttpResponse(b'png', content_type='image/png')
+
+        request = api_factory.get('/data/upload/1/slide.svs', {'preview': '1'})
+        request.user = user
+        uploaded_file_view.request = request
+
+        response = uploaded_file_view.get(request, filename='1/slide.svs')
+
+        assert response['Content-Type'] == 'image/png'
+        mock_preview.assert_called_once()
 
     @mock.patch('data_import.api.FileUpload.objects.filter')
     @mock.patch('data_import.api.settings.USE_NGINX_FOR_UPLOADS', True)

@@ -8,7 +8,13 @@ class HasObjectPermission(BasePermission):
 
 class MemberHasOwnerPermission(BasePermission):
     def has_object_permission(self, request, view, obj):
-        if request.method not in SAFE_METHODS and not request.user.own_organization:
-            return False
+        if request.method not in SAFE_METHODS:
+            organization_id = getattr(obj, 'organization_id', None)
+
+            if organization_id is None:
+                organization_id = getattr(obj, 'pk', None)
+
+            if organization_id is None or not request.user.is_organization_admin(organization_id):
+                return False
 
         return obj.has_permission(request.user)

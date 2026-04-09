@@ -1,5 +1,6 @@
 import { types, getParent } from "mobx-state-tree";
 import { FileLoader } from "../../../utils/FileLoader";
+import { getMedicalImagePreviewUrl } from "../../../utils/medical-image";
 import { clamp } from "../../../utils/utilities";
 import { FF_IMAGE_MEMORY_USAGE, isFF } from "../../../utils/feature-flags";
 
@@ -74,10 +75,15 @@ export const ImageEntity = types
     get imageCrossOrigin() {
       return self.parent?.imageCrossOrigin ?? "anonymous";
     },
+    get resolvedSrc() {
+      return getMedicalImagePreviewUrl(self.src);
+    },
   }))
   .actions((self) => ({
     preload() {
       if (self.ensurePreloaded() || !self.src) return;
+
+      const resolvedSrc = self.resolvedSrc;
 
       if (isFF(FF_IMAGE_MEMORY_USAGE)) {
         self.setDownloading(true);
@@ -87,7 +93,7 @@ export const ImageEntity = types
           const crossOrigin = self.imageCrossOrigin;
           if (crossOrigin) img.crossOrigin = crossOrigin;
           img.onload = () => {
-            self.setCurrentSrc(self.src);
+            self.setCurrentSrc(resolvedSrc);
             self.setDownloaded(true);
             self.setProgress(1);
             self.setDownloading(false);
@@ -99,14 +105,14 @@ export const ImageEntity = types
             self.setDownloading(false);
             resolve();
           };
-          img.src = self.src;
+          img.src = resolvedSrc;
         });
         return;
       }
 
       self.setDownloading(true);
       fileLoader
-        .download(self.src, (_t, _l, progress) => {
+        .download(resolvedSrc, (_t, _l, progress) => {
           self.setProgress(progress);
         })
         .then((url) => {
@@ -121,18 +127,20 @@ export const ImageEntity = types
     },
 
     ensurePreloaded() {
+      const resolvedSrc = self.resolvedSrc;
+
       if (isFF(FF_IMAGE_MEMORY_USAGE)) return self.currentSrc !== undefined;
 
-      if (fileLoader.isError(self.src)) {
+      if (fileLoader.isError(resolvedSrc)) {
         self.setDownloading(false);
         self.setError(true);
         return true;
       }
-      if (fileLoader.isPreloaded(self.src)) {
+      if (fileLoader.isPreloaded(resolvedSrc)) {
         self.setDownloading(false);
         self.setDownloaded(true);
         self.setProgress(1);
-        self.setCurrentSrc(fileLoader.getPreloadedURL(self.src));
+        self.setCurrentSrc(fileLoader.getPreloadedURL(resolvedSrc));
         return true;
       }
       return false;

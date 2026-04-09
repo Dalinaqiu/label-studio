@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
 import { NavLink } from "react-router-dom";
 import { IconCross } from "@humansignal/icons";
@@ -48,6 +48,10 @@ export const SelectedUser = ({ user, organizationId, onClose, onRoleChange }) =>
   const canManageRoles = permissions.can("organizations.change");
   const canEditRole = canManageRoles && !user.is_owner;
   const selectedRoleLabel = useMemo(() => ROLE_OPTIONS.find((item) => item.value === role)?.label ?? user.role_name, [role, user.role_name]);
+
+  useEffect(() => {
+    setRole(user.role);
+  }, [user.id, user.role]);
 
   const saveRole = async () => {
     setSaving(true);

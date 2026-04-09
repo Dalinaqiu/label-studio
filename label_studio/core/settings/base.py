@@ -505,6 +505,8 @@ SUPPORTED_EXTENSIONS = set(
     [
         '.bmp',
         '.csv',
+        '.dcm',
+        '.dicom',
         '.flac',
         '.gif',
         '.htm',
@@ -525,6 +527,9 @@ SUPPORTED_EXTENSIONS = set(
         '.webm',
         '.webp',
         '.pdf',
+        '.svs',
+        '.tif',
+        '.tiff',
     ]
 )
 
@@ -711,6 +716,11 @@ import mimetypes
 
 mimetypes.add_type('application/javascript', '.js', True)
 mimetypes.add_type('image/png', '.png', True)
+mimetypes.add_type('application/dicom', '.dcm', True)
+mimetypes.add_type('application/dicom', '.dicom', True)
+mimetypes.add_type('image/tiff', '.svs', True)
+mimetypes.add_type('image/tiff', '.tif', True)
+mimetypes.add_type('image/tiff', '.tiff', True)
 
 # fields name was used in DM api before
 REST_FLEX_FIELDS = {'FIELDS_PARAM': 'include'}

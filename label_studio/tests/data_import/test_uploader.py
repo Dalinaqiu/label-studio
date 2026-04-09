@@ -37,6 +37,15 @@ class TestUploader:
     def project(self, configured_project, settings):
         return configured_project
 
+    def test_dicom_extensions_are_supported(self):
+        assert '.dcm' in settings.SUPPORTED_EXTENSIONS
+        assert '.dicom' in settings.SUPPORTED_EXTENSIONS
+
+    def test_wsi_extensions_are_supported(self):
+        assert '.svs' in settings.SUPPORTED_EXTENSIONS
+        assert '.tif' in settings.SUPPORTED_EXTENSIONS
+        assert '.tiff' in settings.SUPPORTED_EXTENSIONS
+
     class TestLoadTasks:
         @mock.patch('core.utils.io.validate_upload_url', wraps=validate_upload_url)
         @pytest.mark.parametrize('url', ('file:///etc/passwd', 'ftp://example.org'))

@@ -34,6 +34,7 @@ const supportedExtensions = {
   audio: ["wav", "mp3", "flac", "m4a", "ogg"],
   video: ["mp4", "webm"],
   image: ["bmp", "gif", "jpg", "jpeg", "png", "svg", "webp"],
+  medicalImage: ["dcm", "dicom", "svs", "tif", "tiff"],
   html: ["html", "htm", "xml"],
   pdf: ["pdf"],
   structuredData: ["csv", "tsv", "json"],
@@ -440,6 +441,8 @@ export const ImportPage = ({
                     <dl>
                       <dt>图片</dt>
                       <dd>{supportedExtensions.image.join(", ")}</dd>
+                      <dt>医学影像</dt>
+                      <dd>{supportedExtensions.medicalImage.join(", ")}</dd>
                       <dt>音频</dt>
                       <dd>{supportedExtensions.audio.join(", ")}</dd>
                       <dt>

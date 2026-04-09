@@ -37,6 +37,11 @@ from webhooks.utils import emit_webhooks_for_instance
 
 from label_studio.core.utils.common import load_func
 
+from .medical_image_preview import (
+    MedicalImagePreviewError,
+    is_medical_image_path,
+    render_medical_image_preview_response,
+)
 from .functions import (
     async_import_background,
     async_reimport_background,
@@ -930,6 +935,12 @@ class UploadedFileResponse(generics.RetrieveAPIView):
 
         file = file_upload.file
         if file.storage.exists(file.name):
+            if request.GET.get('preview') == '1' and is_medical_image_path(file.name):
+                try:
+                    return render_medical_image_preview_response(file.open(mode='rb'), file.name)
+                except MedicalImagePreviewError as exc:
+                    return Response({'detail': str(exc)}, status=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE)
+
             content_type, encoding = mimetypes.guess_type(str(file.name))
             content_type = content_type or 'application/octet-stream'
             return RangedFileResponse(request, file.open(mode='rb'), content_type=content_type)
@@ -993,6 +1004,12 @@ class DownloadStorageData(APIView):
 
         if file_obj is None:
             return Response(status=status.HTTP_403_FORBIDDEN)
+
+        if request.GET.get('preview') == '1' and is_medical_image_path(filepath):
+            try:
+                return render_medical_image_preview_response(file_obj.open(mode='rb'), filepath)
+            except MedicalImagePreviewError as exc:
+                return Response({'detail': str(exc)}, status=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE)
 
         # NGINX handling is the default for better performance
         if settings.USE_NGINX_FOR_UPLOADS:
