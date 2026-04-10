@@ -77,15 +77,14 @@ export const PeopleList = ({ organizationId, onSelect, selectedUser, defaultSele
         {usersList ? (
           <div className={cn("people-list").elem("users").toClassName()}>
             <div className={cn("people-list").elem("header").toClassName()}>
-              <div className={cn("people-list").elem("column").mix("avatar").toClassName()} />
-              <div className={cn("people-list").elem("column").mix("email").toClassName()}>Email</div>
-              <div className={cn("people-list").elem("column").mix("name").toClassName()}>Name</div>
-              <div className={cn("people-list").elem("column").mix("role").toClassName()}>Role</div>
-              <div className={cn("people-list").elem("column").mix("last-activity").toClassName()}>Last Active</div>
+              <div className={cn("people-list").elem("column").mix("member").toClassName()}>成员</div>
+              <div className={cn("people-list").elem("column").mix("role").toClassName()}>角色</div>
+              <div className={cn("people-list").elem("column").mix("last-activity").toClassName()}>最近活跃</div>
             </div>
             <div className={cn("people-list").elem("body").toClassName()}>
               {usersList.map(({ user }) => {
                 const active = user.id === selectedUser?.id;
+                const fullName = [user.first_name, user.last_name].filter(Boolean).join(" ").trim();
 
                 return (
                   <div
@@ -93,14 +92,16 @@ export const PeopleList = ({ organizationId, onSelect, selectedUser, defaultSele
                     className={cn("people-list").elem("user").mod({ active }).toClassName()}
                     onClick={() => handleUserClick(user)}
                   >
-                    <div className={cn("people-list").elem("field").mix("avatar").toClassName()}>
-                      <CopyableTooltip title={`User ID: ${user.id}`} textForCopy={user.id}>
-                        <Userpic user={user} style={{ width: 28, height: 28 }} />
-                      </CopyableTooltip>
-                    </div>
-                    <div className={cn("people-list").elem("field").mix("email").toClassName()}>{user.email}</div>
-                    <div className={cn("people-list").elem("field").mix("name").toClassName()}>
-                      {user.first_name} {user.last_name}
+                    <div className={cn("people-list").elem("field").mix("member").toClassName()}>
+                      <div className={cn("people-list").elem("avatar").toClassName()}>
+                        <CopyableTooltip title={`User ID: ${user.id}`} textForCopy={user.id}>
+                          <Userpic user={user} style={{ width: 36, height: 36 }} />
+                        </CopyableTooltip>
+                      </div>
+                      <div className={cn("people-list").elem("identity").toClassName()}>
+                        <div className={cn("people-list").elem("primary").toClassName()}>{fullName || user.email}</div>
+                        <div className={cn("people-list").elem("secondary").toClassName()}>{user.email}</div>
+                      </div>
                     </div>
                     <div className={cn("people-list").elem("field").mix("role").toClassName()}>{user.role_name}</div>
                     <div className={cn("people-list").elem("field").mix("last-activity").toClassName()}>

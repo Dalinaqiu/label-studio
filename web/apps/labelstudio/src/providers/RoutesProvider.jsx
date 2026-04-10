@@ -1,6 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { generatePath, matchPath, useHistory, useLocation } from "react-router";
-import { Pages } from "../pages";
 import { setBreadcrumbs, useBreadcrumbControls } from "../services/breadrumbs";
 import { pageSetToRoutes } from "../utils/routeHelpers";
 import { useAppStore } from "./AppStoreProvider";
@@ -47,6 +46,7 @@ export const RoutesProvider = ({ children }) => {
   const [currentContextProps, setCurrentContextProps] = useState(null);
 
   const routesMap = useMemo(() => {
+    const { Pages } = require("../pages");
     return pageSetToRoutes(Pages, { config, store });
   }, [location, config, store, history]);
 

@@ -4,8 +4,8 @@ import { IconCloudProviderS3 } from "@humansignal/icons";
 
 export const s3Provider: ProviderConfig = {
   name: "s3",
-  title: "Amazon S3",
-  description: "配置你的 AWS S3 连接及所需的 Label Studio 设置",
+  title: "Amazon S3 存储",
+  description: "配置你的 AWS S3 连接以及所需的 Label Studio 设置",
   icon: IconCloudProviderS3,
   fields: [
     {
@@ -41,22 +41,22 @@ export const s3Provider: ProviderConfig = {
     {
       name: "aws_access_key_id",
       type: "password",
-      label: "Access Key ID",
+      label: "访问密钥 ID",
       required: true,
       placeholder: "AKIAIOSFODNN7EXAMPLE",
       autoComplete: "off",
       accessKey: true,
-      schema: z.string().min(1, "Access Key ID 为必填项"),
+      schema: z.string().min(1, "访问密钥 ID 为必填项"),
     },
     {
       name: "aws_secret_access_key",
       type: "password",
-      label: "Secret Access Key",
+      label: "访问密钥",
       required: true,
       placeholder: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
       autoComplete: "new-password",
       accessKey: true,
-      schema: z.string().min(1, "Secret Access Key 为必填项"),
+      schema: z.string().min(1, "访问密钥为必填项"),
     },
     {
       name: "aws_session_token",

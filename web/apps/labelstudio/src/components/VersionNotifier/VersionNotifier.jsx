@@ -48,7 +48,7 @@ export const VersionNotifier = ({ showNewVersion, showCurrentVersion }) => {
 
   return newVersion && showNewVersion ? (
     <li className={cn("version-notifier").toClassName()}>
-      <a href={url} target="_blank" rel="noreferrer">
+      {/* <a href={url} target="_blank" rel="noreferrer">
         <div className={cn("version-notifier").elem("icon").toClassName()}>
           <IconBell />
         </div>
@@ -58,7 +58,7 @@ export const VersionNotifier = ({ showNewVersion, showCurrentVersion }) => {
           </div>
           <div className={cn("version-notifier").elem("description").toClassName()}>Current version: {version}</div>
         </div>
-      </a>
+      </a> */}
     </li>
   ) : version && showCurrentVersion ? (
     <Link className={cn("current-version").toClassName()} to="/version" target="_blank">

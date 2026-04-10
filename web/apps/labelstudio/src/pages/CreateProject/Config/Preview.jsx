@@ -141,7 +141,12 @@ export const Preview = ({ config, data, error, loading, project }) => {
 
   return (
     <div className={configClass.elem("preview")}>
-      <h3>UI Preview</h3>
+      <div className={configClass.elem("preview-head")}>
+        <div>
+          <h3>实时预览</h3>
+          <p>右侧会根据当前模板与字段配置即时刷新，便于确认最终标注界面。</p>
+        </div>
+      </div>
       {error && (
         <div className={configClass.elem("preview-error")}>
           <h2>

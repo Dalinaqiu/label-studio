@@ -1,4 +1,4 @@
-import { EnterpriseBadge, Select, Typography } from "@humansignal/ui";
+import { EnterpriseBadge, PageHeader, Select, Typography } from "@humansignal/ui";
 import { useCallback, useContext } from "react";
 import { Button } from "@humansignal/ui";
 import { Form, Input, TextArea } from "../../components/Form";
@@ -26,7 +26,11 @@ export const GeneralSettings = () => {
   return (
     <div className={cn("general-settings").toClassName()}>
       <div className={cn("general-settings").elem("wrapper").toClassName()}>
-        <h1>常规设置</h1>
+        <PageHeader
+          title="常规设置"
+          description="统一管理项目名称、描述、颜色和任务采样方式，优先展示最常改的基础配置。"
+          className="mb-6"
+        />
         <div className={cn("settings-wrapper").toClassName()}>
           <Form action="updateProject" formData={{ ...project }} params={{ pk: project.id }} onSubmit={updateProject}>
             <Form.Row columnCount={1} rowGap="16px">

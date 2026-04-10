@@ -1,13 +1,29 @@
 .user-info {
-  padding: 20px 24px;
+  padding: 24px;
   border: 1px solid var(--color-neutral-border);
-  background: var(--color-neutral-surface);
+  background: linear-gradient(180deg, rgba(252 253 255 / 100%), rgba(255 255 255 / 100%));
   align-self: start;
   display: flex;
   flex-direction: column;
   position: relative;
-  border-radius: 4px;
+  border-radius: 18px;
   min-height: 100%;
+  box-shadow: 0 18px 40px -34px rgba(var(--color-neutral-shadow-raw) / 28%);
+
+  &__close {
+    position: absolute;
+    top: 18px;
+    right: 18px;
+    width: 36px;
+    height: 36px;
+    border-radius: 999px;
+    color: var(--color-neutral-content-subtler);
+
+    &:hover {
+      background: var(--color-neutral-emphasis-subtle);
+      color: var(--color-neutral-content);
+    }
+  }
 
   &__header {
     display: grid;
@@ -15,48 +31,84 @@
     column-gap: 16px;
     line-height: 1.5;
     color: var(--color-neutral-content);
-    margin-bottom: 16px;
+    margin-bottom: 20px;
     align-items: center;
   }
 
   &__email {
     margin: 0;
+    color: var(--color-neutral-content-subtler);
+  }
+
+  &__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 10px;
+    align-items: center;
+  }
+
+  &__role-badge {
+    display: inline-flex;
+    align-items: center;
+    min-height: 28px;
+    padding: 0 10px;
+    border-radius: 999px;
+    background: rgba(var(--color-primary-raw) / 0.08);
+    color: var(--color-primary-content);
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  &__meta-text {
+    color: var(--color-neutral-content-subtler);
+    font-size: 13px;
   }
 
   &__full-name {
-    font-size: 1.5em;
+    font-size: 28px;
     margin: 0;
-    font-weight: 500;
-    line-height: 1.2;
+    font-weight: 700;
+    line-height: 1.15;
     color: var(--color-neutral-content);
   }
 
   &__section {
+    padding-top: 18px;
+    border-top: 1px solid var(--color-neutral-border);
+
     & + & {
       margin-top: 16px;
     }
 
     &-title {
-      margin-top: 1em;
-      margin-bottom: 8px;
-      font-weight: 500;
+      margin-top: 0;
+      margin-bottom: 10px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
       color: var(--color-neutral-content);
     }
   }
 
   &__last-active {
     color: var(--color-neutral-content-subtler);
-    margin-top: 32px;
+    margin-top: auto;
+    padding-top: 20px;
     margin-bottom: 0;
+    font-size: 13px;
   }
 
   &__links-list {
     display: flex;
     flex-direction: column;
+    gap: 4px;
   }
 
   &__role-editor {
     display: flex;
+    flex-wrap: wrap;
     gap: 8px;
     align-items: center;
   }
@@ -72,14 +124,14 @@
   }
 
   &__project-link {
-    height: 36px;
+    min-height: 36px;
     display: flex;
     padding: 0 10px;
-    font-size: 16px;
-    margin-left: -10px;
+    font-size: 14px;
     align-items: center;
-    border-radius: 4px;
+    border-radius: 10px;
     color: var(--color-primary-content);
+    background: rgba(var(--color-primary-raw) / 0.04);
 
     &:hover {
       background-color: var(--color-primary-emphasis-subtle);

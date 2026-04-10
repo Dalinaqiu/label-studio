@@ -1,12 +1,14 @@
 .people-list {
   width: 100%;
-  min-width: 650px;
-  font-size: 16px;
+  min-width: 0;
+  font-size: 14px;
 
   &__wrapper {
-    border-radius: 4px;
+    border-radius: 18px;
     border: 1px solid var(--color-neutral-border);
     background: var(--color-neutral-background);
+    overflow: hidden;
+    box-shadow: 0 18px 40px -34px rgba(var(--color-neutral-shadow-raw) / 30%);
   }
 
   &__loading {
@@ -20,91 +22,129 @@
   &__users {
     width: 100%;
     text-align: left;
-    border-collapse: collapse;
   }
 
   &__header {
-    font-weight: 500;
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 144px 144px;
+    gap: 12px;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--color-neutral-border);
+    background: linear-gradient(180deg, rgba(250 252 255 / 100%), rgba(255 255 255 / 100%));
   }
 
   &__column,
   &__field {
-    z-index: 2;
-    height: 48px;
-    padding: 0 10px;
-    border: none;
     color: var(--color-neutral-content);
     display: flex;
     position: relative;
     align-items: center;
-
-    &.avatar {
-      width: 28px;
-      box-sizing: content-box;
-    }
-
-    &.name {
-      flex: 1;
-    }
-
-    &.email {
-      width: 200px;
-    }
-
-    &.last-activity {
-      width: 160px;
-    }
-
-    &.role {
-      width: 140px;
-    }
-  }
-
-  &__field {
-    &.last-activity {
-      color: var(--color-neutral-content);
-    }
   }
 
   &__column {
-    font-weight: 500;
-    background: none;
+    min-width: 0;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--color-neutral-content-subtler);
+    text-transform: uppercase;
   }
 
   &__user {
     cursor: pointer;
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 144px 144px;
+    gap: 12px;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--color-neutral-border);
+    transition:
+      background-color 140ms ease-out,
+      box-shadow 140ms ease-out,
+      transform 140ms ease-out;
 
-    &:nth-child(odd):not(&_active) {
-      background-color: var(--color-neutral-emphasis-subtle);
+    &:hover {
+      background: rgba(var(--color-primary-raw) / 0.04);
     }
 
     &_active {
-      position: relative;
-      background-color: var(--color-primary-surface);
+      background: rgba(var(--color-primary-raw) / 0.08);
+      box-shadow: inset 3px 0 0 var(--color-primary-content);
+    }
+  }
 
-      &::before,
-      &::after {
-        top: 0;
-        bottom: 0;
-        left: 0;
-        content: '';
-        display: block;
-        position: absolute;
-      }
+  &__body {
+    background: var(--color-neutral-background);
+  }
 
-      &::after {
-        z-index: 1;
-        background-color: var(--color-neutral-surface);
-        width: calc(100% + 22px);
-        box-shadow: inset 4px 0 0 var(--grape_500), 1px 0 0 1px var(--color-neutral-border) inset;
-      }
+  &__field {
+    min-width: 0;
+    min-height: 60px;
 
-      &::before {
-        z-index: 0;
-        height: 100%;
-        width: calc(100% + 22px);
+    &.member {
+      gap: 12px;
+    }
+
+    &.role,
+    &.last-activity {
+      justify-content: flex-start;
+    }
+
+    &.role {
+      font-weight: 600;
+    }
+
+    &.last-activity {
+      color: var(--color-neutral-content-subtler);
+      white-space: nowrap;
+    }
+  }
+
+  &__avatar {
+    flex: 0 0 auto;
+  }
+
+  &__identity {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  &__primary {
+    min-width: 0;
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1.35;
+    color: var(--color-neutral-content);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__secondary {
+    min-width: 0;
+    color: var(--color-neutral-content-subtler);
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+  }
+
+  @media (width <= 1280px) {
+    &__header,
+    &__user {
+      grid-template-columns: minmax(0, 1fr) 132px 132px;
+    }
+  }
+
+  @media (width <= 900px) {
+    &__header,
+    &__user {
+      grid-template-columns: minmax(0, 1fr) 120px;
+    }
+
+    &__column,
+    &__field {
+      &.last-activity {
+        display: none;
       }
     }
   }

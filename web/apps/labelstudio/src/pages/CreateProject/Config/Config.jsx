@@ -484,18 +484,30 @@ const Configurator = ({
   return (
     <div className={configClass}>
       <div className={configClass.elem("container")}>
-        <h1>标注界面{hasChanges ? " *" : ""}</h1>
-        <header>
-          <Button
-            type="button"
-            data-leave={true}
-            onClick={onBrowse}
-            size="small"
-            look="outlined"
-            aria-label="浏览模板"
-          >
-            浏览模板
-          </Button>
+        <div className={configClass.elem("hero")}>
+          <div>
+            <h1>标注界面{hasChanges ? " *" : ""}</h1>
+            <p className={configClass.elem("subtitle")}>
+              先选择合适模板，再按字段和标签结构微调。右侧会实时预览当前配置。
+            </p>
+          </div>
+          <div className={configClass.elem("hero-meta")}>
+            <span className={configClass.elem("mode-badge")}>{configure === "code" ? "代码模式" : "可视化模式"}</span>
+          </div>
+        </div>
+        <header className={configClass.elem("toolbar")}>
+          <div className={configClass.elem("toolbar-actions")}>
+            <Button
+              type="button"
+              data-leave={true}
+              onClick={onBrowse}
+              size="small"
+              look="outlined"
+              aria-label="浏览模板"
+            >
+              浏览模板
+            </Button>
+          </div>
           <ToggleItems items={{ code: "代码", visual: "可视化" }} active={configure} onSelect={onSelect} />
         </header>
         <div className={configClass.elem("editor")}>

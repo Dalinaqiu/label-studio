@@ -12,7 +12,9 @@ export const SidebarMenu = ({ children, menu, path, menuItems }) => {
           <Menu>{menuItems ? Menu.Builder(path, menuItems) : menu}</Menu>
         </div>
       ) : null}
-      <div className={rootClass.elem("content")}>{children}</div>
+      <div className={rootClass.elem("content")}>
+        <div className={rootClass.elem("content-inner")}>{children}</div>
+      </div>
     </div>
   );
 };

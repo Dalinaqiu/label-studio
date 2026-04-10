@@ -1,7 +1,7 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useParams as useRouterParams } from "react-router";
 import { Redirect } from "react-router-dom";
-import { Button } from "@humansignal/ui";
+import { Button, FilterBar, PageHeader, Select } from "@humansignal/ui";
 import { Oneof } from "../../components/Oneof/Oneof";
 import { Spinner } from "../../components/Spinner/Spinner";
 import { ApiContext } from "../../providers/ApiProvider";
@@ -31,6 +31,9 @@ export const ProjectsPage = () => {
 
   useUpdatePageTitle("项目");
   const defaultPageSize = Number.parseInt(localStorage.getItem("pages:projects-list") ?? 30);
+  const [searchValue, setSearchValue] = useState("");
+  const [stateFilter, setStateFilter] = useState("all");
+  const [viewMode, setViewMode] = useState("table");
 
   const [modal, setModal] = React.useState(false);
 
@@ -111,10 +114,35 @@ export const ProjectsPage = () => {
   }, []);
 
   React.useEffect(() => {
-    // there is a nice page with Create button when list is empty
-    // so don't show the context button in that case
-    setContextProps({ openModal, showButton: projectsList.length > 0 });
-  }, [projectsList.length]);
+    setContextProps({ openModal, showButton: false });
+  }, []);
+
+  const stateOptions = useMemo(() => {
+    const states = Array.from(new Set(projectsList.map((project) => project.state).filter(Boolean)));
+
+    return [
+      { value: "all", label: "全部状态" },
+      ...states.map((state) => ({ value: state, label: state })),
+    ];
+  }, [projectsList]);
+
+  const filteredProjects = useMemo(() => {
+    return projectsList.filter((project) => {
+      const normalizedSearch = searchValue.trim().toLowerCase();
+      const matchSearch =
+        normalizedSearch.length === 0 ||
+        project.title?.toLowerCase().includes(normalizedSearch) ||
+        project.description?.toLowerCase().includes(normalizedSearch);
+      const matchState = stateFilter === "all" || project.state === stateFilter;
+
+      return matchSearch && matchState;
+    });
+  }, [projectsList, searchValue, stateFilter]);
+
+  const resetFilters = () => {
+    setSearchValue("");
+    setStateFilter("all");
+  };
 
   return (
     <div className={cn("projects-page").toClassName()}>
@@ -123,17 +151,57 @@ export const ProjectsPage = () => {
           <Spinner size={64} />
         </div>
         <div className={cn("projects-page").elem("content").toClassName()} case="loaded">
-          {projectsList.length ? (
-            <ProjectsList
-              projects={projectsList}
-              currentPage={currentPage}
-              totalItems={totalItems}
-              loadNextPage={loadNextPage}
-              pageSize={defaultPageSize}
+          <div className="mx-auto flex max-w-[1440px] flex-col gap-6 p-6">
+            <PageHeader
+              title="项目管理"
+              description="用表格优先的方式查看、筛选和进入项目，适合高频管理和连续处理任务。"
+              meta="项目 / 管理"
+              actions={
+                <Button onClick={openModal} aria-label="创建项目">
+                  新建项目
+                </Button>
+              }
             />
-          ) : (
-            <EmptyProjectsList openModal={openModal} />
-          )}
+
+            <FilterBar
+              searchValue={searchValue}
+              onSearchChange={setSearchValue}
+              searchPlaceholder="搜索项目名称或描述"
+              viewOptions={[
+                { value: "table", label: "表格视图" },
+                { value: "cards", label: "卡片视图" },
+              ]}
+              viewValue={viewMode}
+              onViewChange={setViewMode}
+              filters={
+                <Select
+                  value={stateFilter}
+                  options={stateOptions}
+                  onChange={(value) => setStateFilter(value)}
+                  placeholder="全部状态"
+                  triggerClassName="min-w-[180px]"
+                  aria-label="状态筛选"
+                />
+              }
+            />
+
+            {projectsList.length ? (
+              <ProjectsList
+                projects={filteredProjects}
+                currentPage={currentPage}
+                totalItems={totalItems}
+                loadNextPage={loadNextPage}
+                pageSize={defaultPageSize}
+                viewMode={viewMode}
+                searchValue={searchValue}
+                stateFilter={stateFilter}
+                onCreateProject={openModal}
+                onResetFilters={resetFilters}
+              />
+            ) : (
+              <EmptyProjectsList openModal={openModal} />
+            )}
+          </div>
           {modal && <CreateProject onClose={closeModal} />}
         </div>
       </Oneof>

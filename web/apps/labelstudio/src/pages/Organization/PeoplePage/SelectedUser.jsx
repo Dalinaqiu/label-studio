@@ -67,7 +67,7 @@ export const SelectedUser = ({ user, organizationId, onClose, onRoleChange }) =>
       });
 
       if (response?.role) {
-        toast.show({ message: "Member role updated" });
+        toast.show({ message: "成员角色已更新" });
         onRoleChange?.({
           ...user,
           role: response.role,
@@ -79,7 +79,7 @@ export const SelectedUser = ({ user, organizationId, onClose, onRoleChange }) =>
       const message = error?.response?.data?.detail;
 
       toast.show({
-        message: message || "Failed to update member role",
+        message: message || "更新成员角色失败",
         type: "error",
       });
     } finally {
@@ -92,8 +92,8 @@ export const SelectedUser = ({ user, organizationId, onClose, onRoleChange }) =>
       <Button
         look="string"
         onClick={onClose}
-        className="absolute top-[20px] right-[24px]"
-        aria-label="Close user details"
+        className={cn("user-info").elem("close").toClassName()}
+        aria-label="关闭成员详情"
       >
         <IconCross />
       </Button>
@@ -103,11 +103,17 @@ export const SelectedUser = ({ user, organizationId, onClose, onRoleChange }) =>
         <div className={cn("user-info").elem("info-wrapper").toClassName()}>
           {fullName && <div className={cn("user-info").elem("full-name").toClassName()}>{fullName}</div>}
           <p className={cn("user-info").elem("email").toClassName()}>{user.email}</p>
+          <div className={cn("user-info").elem("meta").toClassName()}>
+            <span className={cn("user-info").elem("role-badge").toClassName()}>{selectedRoleLabel}</span>
+            <span className={cn("user-info").elem("meta-text").toClassName()}>
+              最近活跃 {format(new Date(user.last_activity), "yyyy-MM-dd HH:mm")}
+            </span>
+          </div>
         </div>
       </div>
 
       <div className={cn("user-info").elem("section").toClassName()}>
-        <div className={cn("user-info").elem("section-title").toClassName()}>Role</div>
+        <div className={cn("user-info").elem("section-title").toClassName()}>角色权限</div>
         {canEditRole ? (
           <div className={cn("user-info").elem("role-editor").toClassName()}>
             <select
@@ -123,7 +129,7 @@ export const SelectedUser = ({ user, organizationId, onClose, onRoleChange }) =>
               ))}
             </select>
             <Button size="small" onClick={saveRole} disabled={saving || role === user.role}>
-              Save
+              保存
             </Button>
           </div>
         ) : (
@@ -139,20 +145,20 @@ export const SelectedUser = ({ user, organizationId, onClose, onRoleChange }) =>
 
       {!!user.created_projects?.length && (
         <div className={cn("user-info").elem("section").toClassName()}>
-          <div className={cn("user-info").elem("section-title").toClassName()}>Created Projects</div>
+          <div className={cn("user-info").elem("section-title").toClassName()}>创建的项目</div>
           <UserProjectsLinks projects={user.created_projects} />
         </div>
       )}
 
       {!!user.contributed_to_projects?.length && (
         <div className={cn("user-info").elem("section").toClassName()}>
-          <div className={cn("user-info").elem("section-title").toClassName()}>Contributed Projects</div>
+          <div className={cn("user-info").elem("section-title").toClassName()}>参与的项目</div>
           <UserProjectsLinks projects={user.contributed_to_projects} />
         </div>
       )}
 
       <p className={cn("user-info").elem("last-active").toClassName()}>
-        Last active at {format(new Date(user.last_activity), "yyyy-MM-dd HH:mm")}
+        上次活跃时间 {format(new Date(user.last_activity), "yyyy-MM-dd HH:mm")}
       </p>
     </div>
   );

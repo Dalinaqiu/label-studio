@@ -58,7 +58,7 @@ const WebhookForm = ({
       <Form.Row columnCount={1}>
         <Label text="回调 URL" large />
         <div className="grid grid-cols-[1fr_135px] gap-tight">
-          <Input name="url" className="self-stretch w-auto" placeholder="URL" />
+          <Input name="url" className="self-stretch w-auto" placeholder="请输入回调地址" />
           <div className="grid grid-flow-col auto-cols-max items-center justify-end gap-tight self-center">
             <span className="text-neutral-content">启用</span>
             <Toggle

@@ -50,20 +50,56 @@
     line-height: 1em;
   }
 
-  &>header {
+  &__header {
     font-size: 14px;
-    padding: 24px 32px;
+    padding: 20px 24px 16px;
     background: var(--color-neutral-background);
     display: flex;
-    align-items: center;
+    flex-direction: column;
+    gap: 14px;
+    border-bottom: 1px solid rgb(229 234 242 / 100%);
+  }
 
-    &.overlay {
-      box-shadow: 0 2px 5px 0 rgb(0 0 0 / 10%);
+  &__source-bar {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  &__source-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  &__actions-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  &__source-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+
+    span {
+      display: inline-flex;
+      align-items: center;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgb(246 248 252 / 100%);
+      color: var(--color-neutral-content-subtler);
+      font-size: 12px;
+      font-weight: 600;
     }
   }
 
   &__url-form {
     display: flex;
+    align-items: stretch;
 
     input {
       border: 1px solid var(--color-neutral-border);
@@ -88,14 +124,15 @@
       border-radius: 0 var(--corner-radius-smaller) var(--corner-radius-smaller) 0;
     }
 
-    &+span {
-      color: var(--color-neutral-content-subtler);
-    }
   }
 
   &__status {
-    margin-left: auto;
     font-weight: 500;
+    padding: 8px 12px;
+    border-radius: 999px;
+    background: rgb(244 247 252 / 100%);
+    color: var(--color-neutral-content-subtler);
+    white-space: nowrap;
   }
 
   &>main {
@@ -112,7 +149,20 @@
 
   table {
     table-layout: fixed;
-    
+
+    thead tr {
+      border-bottom: 1px solid var(--color-neutral-border);
+      background: transparent;
+    }
+
+    th {
+      padding: 0 12px 12px;
+      text-align: left;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--color-neutral-content-subtler);
+    }
+
     tr {
       border-bottom: 2px solid var(--color-neutral-background);
       background-color: transparent;
@@ -151,6 +201,19 @@
           rgb(255 255 255 / 20%) 7px,
           rgb(255 255 255 / 20%) 12px);
     }
+  }
+
+  &__file-status-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  &__file-status-label {
+    color: var(--color-neutral-content-subtler);
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
   }
 
   &__file-name {
@@ -198,7 +261,14 @@
   }
 
   &__csv-handling {
-    margin: 0 auto;
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    width: fit-content;
+    padding: 8px 12px;
+    border-radius: 12px;
+    background: rgb(247 249 253 / 100%);
 
     &_hidden {
       display: none;
@@ -214,8 +284,10 @@
     }
 
     label {
-      margin-left: 8px;
       cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
     }
   }
 
@@ -227,11 +299,38 @@
     border-radius: 5px;
     pointer-events: none;
   }
+
+  &__list-summary {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 0 0 16px;
+  }
+
+  &__list-summary-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+
+    span {
+      display: inline-flex;
+      align-items: center;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgb(246 248 252 / 100%);
+      color: var(--color-neutral-content-subtler);
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+  }
 }
 
 /* Import files via dropzone */
 .dropzone {
-  padding: 0 32px 32px;
+  padding: 20px 24px 24px;
   margin: 0;
   min-height: 600px;
   height: 100%;
@@ -250,7 +349,7 @@
     content: "";
     transition: all 300ms ease-out;
     position: absolute;
-    inset: 16px 48px 48px;
+    inset: 8px 24px 24px;
     pointer-events: none;
     border: 2px dashed transparent;
     border-radius: var(--corner-radius-small);
@@ -267,9 +366,9 @@
 
   &_hovered {
     &::before {
-      content: "Drop file(s) to upload";
+      content: "拖拽文件到这里以上传";
       position: absolute;
-      inset: 0 32px 32px;
+      inset: 0 24px 24px;
       border: 2px dashed var(--color-primary-border-subtle);
       background: var(--color-primary-emphasis);
       font-size: 32px;
@@ -295,19 +394,28 @@
     background: var(--color-primary-background);
     border: 1px solid var(--color-primary-border-subtler);
     color: var(--color-neutral-content-subtle);
-    padding: var(--spacing-base);
-    border-radius: var(--corner-radius-small);
+    padding: 28px 28px 24px;
+    border-radius: 20px;
     transition: all 150ms ease-out;
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 70%);
 
     &>*:not(:first-child) {
-      margin-top: 32px;
+      margin-top: 24px;
     }
 
     header {
-      font-size: 24px;
-      line-height: 32px;
+      font-size: 26px;
+      line-height: 1.2;
       text-align: center;
       color: var(--color-neutral-content);
+    }
+
+    .dropzone__subhead {
+      max-width: 420px;
+      margin-top: 10px;
+      text-align: center;
+      color: var(--color-neutral-content-subtler);
+      line-height: 1.6;
     }
 
     dl {
@@ -335,6 +443,14 @@
       border-color: var(--color-primary-border);
     }
 
+    .tips {
+      max-width: 920px;
+      width: 100%;
+      padding: 16px 18px;
+      border: 1px solid rgb(228 233 242 / 100%);
+      border-radius: 16px;
+      background: rgb(250 251 253 / 100%);
+    }
   }
 }
 

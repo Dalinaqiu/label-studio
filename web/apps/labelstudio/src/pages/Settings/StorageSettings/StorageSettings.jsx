@@ -114,18 +114,18 @@ export const StorageSettings = () => {
             description="使用云或数据库存储作为标注任务的数据源，或作为已完成标注结果的目标。"
             additionalContent={
               <div className="flex items-center justify-center gap-base" data-testid="dm-storage-provider-icons">
-                <Tooltip title="Amazon S3">
-                  <div className="flex items-center justify-center p-2" aria-label="Amazon S3">
+                <Tooltip title="Amazon S3 存储">
+                  <div className="flex items-center justify-center p-2" aria-label="Amazon S3 存储">
                     <IconCloudProviderS3 width={32} height={32} className="text-neutral-content-subtler" />
                   </div>
                 </Tooltip>
-                <Tooltip title="Google Cloud Storage">
-                  <div className="flex items-center justify-center p-2" aria-label="Google Cloud Storage">
+                <Tooltip title="Google Cloud Storage 存储">
+                  <div className="flex items-center justify-center p-2" aria-label="Google Cloud Storage 存储">
                     <IconCloudProviderGCS width={32} height={32} className="text-neutral-content-subtler" />
                   </div>
                 </Tooltip>
-                <Tooltip title="Azure Blob Storage">
-                  <div className="flex items-center justify-center p-2" aria-label="Azure Blob Storage">
+                <Tooltip title="Azure Blob Storage 存储">
+                  <div className="flex items-center justify-center p-2" aria-label="Azure Blob Storage 存储">
                     <IconCloudProviderAzure width={32} height={32} className="text-neutral-content-subtler" />
                   </div>
                 </Tooltip>

@@ -23,6 +23,9 @@ export * from "./lib/toast/toast";
 export * from "./lib/toggle/toggle";
 export * from "./lib/typography/typography";
 export * from "./lib/accordion/accordion";
+export * from "./lib/page-header";
+export * from "./lib/stat-card";
+export * from "./lib/filter-bar";
 
 export * from "./assets/icons";
 export * from "./lib/simple-card";

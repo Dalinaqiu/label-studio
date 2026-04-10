@@ -4,7 +4,7 @@ import { useAPI } from "../../../providers/ApiProvider";
 import { cn } from "../../../utils/bem";
 import "./Config.scss";
 import { IconInfo } from "@humansignal/icons";
-import { Button, EnterpriseBadge } from "@humansignal/ui";
+import { Button, EnterpriseBadge, Typography } from "@humansignal/ui";
 
 const listClass = cn("templates-list");
 
@@ -37,11 +37,20 @@ const TemplatesInGroup = ({ templates, group, onSelectRecipe, isEdition }) => {
             title={isDisabled ? "企业版功能 - 仅在 Label Studio Enterprise 可用" : ""}
           >
             <img src={recipe.image} alt={""} />
-            <div className="flex w-full relative">
-              <h3 className="flex flex-1 justify-center text-center">{recipe.title}</h3>
-              {isEnterpriseTemplate && isCommunityEdition && (
-                <EnterpriseBadge className="absolute bottom-[-10px] left-1/2 translate-x-[-40px]" />
-              )}
+            <div className={listClass.elem("template-body")}>
+              <div className={listClass.elem("template-meta")}>
+                <span>{recipe.group}</span>
+                <span>{isEnterpriseTemplate ? "企业版" : "可用"}</span>
+              </div>
+              <div className="flex w-full relative">
+                <h3 className="flex flex-1 justify-center text-center">{recipe.title}</h3>
+                {isEnterpriseTemplate && isCommunityEdition && (
+                  <EnterpriseBadge className="absolute bottom-[-10px] left-1/2 translate-x-[-40px]" />
+                )}
+              </div>
+              <p className={listClass.elem("template-caption")}>
+                {recipe.description || `适合 ${recipe.group} 场景，可在下一步继续微调字段和标签。`}
+              </p>
             </div>
           </li>
         );
@@ -74,6 +83,14 @@ export const TemplatesList = ({ selectedGroup, selectedRecipe, onCustomTemplate,
   return (
     <div className={listClass}>
       <aside className={listClass.elem("sidebar")}>
+        <div className={listClass.elem("sidebar-copy")}>
+          <Typography variant="label" size="small" className="text-neutral-content-subtler">
+            模板分组
+          </Typography>
+          <Typography variant="body" size="small" className="mt-2 text-neutral-content-subtler">
+            先按数据类型选择，再从最接近业务场景的模板开始。
+          </Typography>
+        </div>
         <ul>
           {groups.map((group) => (
             <li
@@ -102,6 +119,23 @@ export const TemplatesList = ({ selectedGroup, selectedRecipe, onCustomTemplate,
         </Button>
       </aside>
       <main>
+        <div className={listClass.elem("hero")}>
+          <div>
+            <Typography variant="title" size="medium" className="text-neutral-content">
+              选择模板
+            </Typography>
+            <Typography variant="body" size="small" className="mt-2 text-neutral-content-subtler">
+              先从和数据类型最接近的模板开始，后续再细调字段和标签。
+            </Typography>
+          </div>
+          <span className={listClass.elem("hero-badge")}>{selected}</span>
+        </div>
+        {templates && (
+          <div className={listClass.elem("hero-stats")}>
+            <span>当前分组 {templates.filter((recipe) => recipe.group === selected).length} 个模板</span>
+            <span>选择后可继续在下一页细化字段与标签</span>
+          </div>
+        )}
         {!templates && <Spinner style={{ width: "100%", height: 200 }} />}
         <TemplatesInGroup
           templates={templates || []}

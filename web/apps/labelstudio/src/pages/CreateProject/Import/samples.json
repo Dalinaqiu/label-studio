@@ -1,12 +1,12 @@
 [
   {
-    "title": "COCO 2017 Images",
-    "description": "A 100-image subset of the COCO image segmentation benchmark dataset.",
+    "title": "COCO 2017 图像示例",
+    "description": "COCO 图像分割基准数据集中的 100 张图片子集。",
     "url": "https://hs-sandbox-pub.s3.us-east-1.amazonaws.com/sample_data/coco_2017_val_100tasks.json"
   },
   {
-    "title": "CoNLL 2012 NER",
-    "description": "The CoNLL dataset of 13k sentences for Named Entity Recognition.",
+    "title": "CoNLL 2012 命名实体识别",
+    "description": "包含约 1.3 万句子的 CoNLL 命名实体识别数据集。",
     "url": "https://hs-sandbox-pub.s3.us-east-1.amazonaws.com/sample_data/conll_2012.json"
   }
 ]

@@ -113,7 +113,7 @@ const Webhook = () => {
 };
 
 export const WebhookPage = {
-  title: "Webhook",
+  title: "Webhook 回调",
   path: "/webhooks",
   component: Webhook,
 };

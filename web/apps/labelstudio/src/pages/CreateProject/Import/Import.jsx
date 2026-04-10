@@ -377,44 +377,60 @@ export const ImportPage = ({
       {highlightCsvHandling && <div className={importClass.elem("csv-splash")} />}
       <input id="file-input" type="file" name="file" multiple onChange={onUpload} style={{ display: "none" }} />
 
-      <header className="flex gap-4">
-        <form
-          className={`${importClass.elem("url-form")} inline-flex items-stretch`}
-          method="POST"
-          onSubmit={onLoadURL}
-        >
-          <Input placeholder="数据集 URL" name="url" ref={urlRef} rawClassName="h-[40px]" />
-          <Button variant="primary" look="outlined" type="submit" aria-label="添加 URL">
-            添加 URL
+      <header className={importClass.elem("header")}>
+        <div className={importClass.elem("source-bar")}>
+          <div className={importClass.elem("source-copy")}>
+            <Typography variant="title" size="small" className="text-neutral-content">
+              选择数据来源
+            </Typography>
+            <Typography variant="body" size="small" className="text-neutral-content-subtler">
+              支持本地文件、数据集 URL，也可以直接使用示例数据开始验证流程。
+            </Typography>
+          </div>
+          <div className={importClass.elem("status")}>
+            {files.uploaded.length ? `已上传 ${files.uploaded.length} 个文件` : "暂未上传文件"}
+          </div>
+        </div>
+
+        <div className={importClass.elem("source-tags")}>
+          <span>本地文件</span>
+          <span>URL 导入</span>
+          {ff.isActive(ff.FF_SAMPLE_DATASETS) && <span>示例数据</span>}
+          <span>CSV / TSV</span>
+        </div>
+
+        <div className={importClass.elem("actions-row")}>
+          <form className={importClass.elem("url-form")} method="POST" onSubmit={onLoadURL}>
+            <Input placeholder="粘贴数据集 URL" name="url" ref={urlRef} rawClassName="h-[40px]" />
+            <Button variant="primary" look="outlined" type="submit" aria-label="添加 URL">
+              添加 URL
+            </Button>
+          </form>
+          <Button
+            variant="primary"
+            look="outlined"
+            type="button"
+            onClick={() => document.getElementById("file-input").click()}
+            leading={<IconUpload />}
+            aria-label="上传文件"
+          >
+            上传{files.uploaded.length ? "更多" : ""}文件
           </Button>
-        </form>
-        <span>或</span>
-        <Button
-          variant="primary"
-          look="outlined"
-          type="button"
-          onClick={() => document.getElementById("file-input").click()}
-          leading={<IconUpload />}
-          aria-label="上传文件"
-        >
-          上传{files.uploaded.length ? "更多" : ""}文件
-        </Button>
-        {ff.isActive(ff.FF_SAMPLE_DATASETS) && (
-          <SampleDatasetSelect samples={samples} sample={sample} onSampleApplied={onSampleDatasetSelect} />
-        )}
+          {ff.isActive(ff.FF_SAMPLE_DATASETS) && (
+            <SampleDatasetSelect samples={samples} sample={sample} onSampleApplied={onSampleDatasetSelect} />
+          )}
+        </div>
+
         <div
           className={importClass.elem("csv-handling").mod({ highlighted: highlightCsvHandling, hidden: !csvHandling })}
         >
-          <span>将 CSV/TSV 视为</span>
+          <span>将 CSV / TSV 视为</span>
           <label>
             <input {...csvProps} value="tasks" checked={csvHandling === "tasks"} /> 任务列表
           </label>
           <label>
             <input {...csvProps} value="ts" checked={csvHandling === "ts"} /> 时间序列或整段文本文件
           </label>
-        </div>
-        <div className={importClass.elem("status")}>
-          {files.uploaded.length ? `已上传 ${files.uploaded.length} 个文件` : ""}
         </div>
       </header>
 
@@ -433,10 +449,9 @@ export const ImportPage = ({
                   <div className={`${dropzoneClass.elem("content")} w-full`}>
                     <IconFileUpload height="64" className={dropzoneClass.elem("icon")} />
                     <header>
-                      将文件拖放到这里
-                      <br />
-                      或点击浏览
+                      拖放文件到这里
                     </header>
+                    <p className={dropzoneClass.elem("subhead")}>或点击上传，从本地快速导入一批任务数据</p>
 
                     <dl>
                       <dt>图片</dt>
@@ -472,7 +487,7 @@ export const ImportPage = ({
                       <dd>{supportedExtensions.pdf.join(", ")}</dd>
                     </dl>
                     <div className="tips">
-                      <b>重要提示：</b>
+                      <b>导入建议</b>
                       <ul className="mt-2 ml-4 list-disc font-normal">
                         <li>
                           我们建议使用{" "}
@@ -524,11 +539,29 @@ export const ImportPage = ({
             {showList && (
               <div className="w-full">
                 <SimpleCard
-                  title="文件"
+                  title="已导入文件"
                   className="w-full h-full"
                   contentClassName="overflow-y-auto h-[calc(100%-48px)]"
                 >
+                  <div className={importClass.elem("list-summary")}>
+                    <div>
+                      <Typography variant="body" size="small" className="text-neutral-content">
+                        当前导入内容会作为任务来源，创建项目后可直接进入数据处理页继续操作。
+                      </Typography>
+                    </div>
+                    <div className={importClass.elem("list-summary-meta")}>
+                      <span>{sample ? "包含示例数据" : "未使用示例数据"}</span>
+                      <span>{files.uploaded.length + files.uploading.length} 项</span>
+                    </div>
+                  </div>
                   <table className="w-full">
+                    <thead>
+                      <tr>
+                        <th>文件</th>
+                        <th>状态</th>
+                        <th>大小</th>
+                      </tr>
+                    </thead>
                     <tbody>
                       {sample && (
                         <tr key={sample.url}>
@@ -568,7 +601,10 @@ export const ImportPage = ({
                               </Tooltip>
                             </td>
                             <td>
-                              <span className={importClass.elem("file-status")} />
+                              <div className={importClass.elem("file-status-wrap")}>
+                                <span className={importClass.elem("file-status")} />
+                                <span className={importClass.elem("file-status-label")}>已上传</span>
+                              </div>
                             </td>
                             <td className={importClass.elem("file-size")}>
                               <Typography
@@ -599,7 +635,10 @@ export const ImportPage = ({
                               </Tooltip>
                             </td>
                             <td>
-                              <span className={importClass.elem("file-status").mod({ uploading: true })} />
+                              <div className={importClass.elem("file-status-wrap")}>
+                                <span className={importClass.elem("file-status").mod({ uploading: true })} />
+                                <span className={importClass.elem("file-status-label")}>上传中</span>
+                              </div>
                             </td>
                             <td className={importClass.elem("file-size")}>&nbsp;</td>
                           </tr>

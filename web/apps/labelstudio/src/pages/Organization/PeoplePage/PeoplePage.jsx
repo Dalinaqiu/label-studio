@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useUpdatePageTitle } from "@humansignal/core";
 import { IconPlus } from "@humansignal/icons";
-import { Button, useToast } from "@humansignal/ui";
+import { Button, PageHeader, useToast } from "@humansignal/ui";
 import { TokenSettingsModal } from "@humansignal/app-common/blocks/TokenSettingsModal";
 import { HeidiTips } from "../../../components/HeidiTips/HeidiTips";
 import { modal } from "../../../components/Modal/Modal";
@@ -23,7 +23,7 @@ export const PeoplePage = () => {
   const [refreshKey, setRefreshKey] = useState(0);
   const organizationId = useMemo(() => APP_SETTINGS.user?.active_organization ?? 1, []);
 
-  useUpdatePageTitle("Organization Members");
+  useUpdatePageTitle("组织成员");
 
   const selectUser = useCallback((user) => {
     setSelectedUser(user);
@@ -35,12 +35,12 @@ export const PeoplePage = () => {
 
   const apiTokensSettingsModalProps = useMemo(
     () => ({
-      title: "API Token Settings",
+      title: "API Token 设置",
       style: { width: 480 },
       body: () => (
         <TokenSettingsModal
           onSaved={() => {
-            toast.show({ message: "API token updated" });
+            toast.show({ message: "API Token 已更新" });
             apiSettingsModal.current?.close();
           }}
         />
@@ -56,22 +56,23 @@ export const PeoplePage = () => {
 
   return (
     <div className={cn("people").toClassName()}>
-      <div className={cn("people").elem("controls").toClassName()}>
-        <Space spread>
-          <Space />
-
+      <PageHeader
+        title="组织成员"
+        description="集中查看成员、角色和邀请状态，把高频协作入口放在页头，减少在列表和弹窗之间来回切换。"
+        className="mb-6"
+        actions={
           <Space>
             {isFF(FF_AUTH_TOKENS) && (
-              <Button look="outlined" onClick={showApiTokenSettingsModal} aria-label="Open API token settings">
-                API Token Settings
+              <Button look="outlined" onClick={showApiTokenSettingsModal} aria-label="打开 API Token 设置">
+                API Token 设置
               </Button>
             )}
-            <Button leading={<IconPlus className="!h-4" />} onClick={() => setInvitationOpen(true)} aria-label="Invite people">
-              Invite People
+            <Button leading={<IconPlus className="!h-4" />} onClick={() => setInvitationOpen(true)} aria-label="邀请成员">
+              邀请成员
             </Button>
           </Space>
-        </Space>
-      </div>
+        }
+      />
       <div className={cn("people").elem("content").toClassName()}>
         <PeopleList
           organizationId={organizationId}
@@ -105,5 +106,5 @@ export const PeoplePage = () => {
   );
 };
 
-PeoplePage.title = "Organization Members";
+PeoplePage.title = "组织成员";
 PeoplePage.path = "/";
